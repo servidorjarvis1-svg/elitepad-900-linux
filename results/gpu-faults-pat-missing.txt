@@ -1,0 +1,40 @@
+[    5.385904] powervr_sgx 0000:00:02.0: [drm] powervr_sgx/sgx545_ukernel.bin: open microkernel dev, interface 1.0, features 0x2
+[    5.394439] powervr_sgx 0000:00:02.0: [drm] microkernel started
+[   55.658501] powervr_sgx 0000:00:02.0: [drm] powervr_sgx/sgx545_ukernel.bin: open microkernel dev, interface 1.0, features 0x2
+[   55.661494] powervr_sgx 0000:00:02.0: [drm] microkernel started
+[   59.705370] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x00000000 (BIF status 0x000d0008); resetting
+[   59.719573] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   63.163852] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x00000000 (BIF status 0x000d0008); resetting
+[   63.177001] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   63.663868] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x00000000 (BIF status 0x000d0008); resetting
+[   63.677680] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   63.800843] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x00044000 (BIF status 0x000d2000); resetting
+[   63.814265] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   63.818767] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x00000000 (BIF status 0x000d0400); resetting
+[   63.832835] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   64.214346] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x90000000 (BIF status 0x000d0400); resetting
+[   64.229003] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   66.260136] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   66.264886] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x07000000 (BIF status 0x000d0008); resetting
+[   66.277984] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   68.628268] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   69.403898] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x07000000 (BIF status 0x000d0008); resetting
+[   69.418010] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   69.504871] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x00fff000 (BIF status 0x000d0008); resetting
+[   69.520061] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   71.636065] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   71.774764] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x38089000 (BIF status 0x000d0008); resetting
+[   71.788071] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   72.786015] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x07000000 (BIF status 0x000d0008); resetting
+[   72.801182] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   72.827939] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x00fff000 (BIF status 0x000d0008); resetting
+[   72.842114] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   73.931957] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x38089000 (BIF status 0x000d0008); resetting
+[   73.950049] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   74.290919] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x0b000000 (BIF status 0x000d0008); resetting
+[   74.304020] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   76.373028] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   78.420021] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   78.435857] powervr_sgx 0000:00:02.0: [drm] *ERROR* job page fault at 0x07000000 (BIF status 0x000d0008); resetting
+[   78.449981] powervr_sgx 0000:00:02.0: [drm] microkernel started again
+[   80.530997] powervr_sgx 0000:00:02.0: [drm] microkernel started again

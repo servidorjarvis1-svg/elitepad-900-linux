@@ -21,23 +21,25 @@ Everything here was tested on real hardware. Lab notes are in Spanish (`docs/`,
 | WiFi (Atheros AR6004, SDIO) | ✅ | patch 0006 (SDIO 1.8 V) + `firmware-atheros` |
 | eMMC 8-bit bus | ✅ 1.4-1.9× faster | patch 0007, `sdhci_acpi.ctv_emmc=1` |
 | Reboot | ✅ | patch 0003 (cold reset through the SCU IPC mailbox) |
-| GPU PowerVR SGX545 (`8086:08cf`) | ✅ GLES 2.0 | [powervr_sgx fork, branch `clovertrail-v0.2`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/clovertrail-v0.2) + Mesa `sgx` i386 |
+| GPU PowerVR SGX545 (`8086:08cf`) | ✅ GLES 2.0 | upstream PRs [#17 (kernel)](https://github.com/The1TrueJoe/powervr_sgx/pull/17) and [#18 (Mesa)](https://github.com/The1TrueJoe/powervr_sgx/pull/18); the tablet runs branch [`tablet-dev-highmem`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/tablet-dev-highmem) |
 | GPU buffers in HIGHMEM | ✅ 1.4-1.7× faster, and lowmem stays free | patches 0008-0009 (`kernel/7.x/patches/lkml/`) + `powervr_sgx.highmem=1` |
 | Desktop | ✅ Xfce on X11, glamor on the SGX545 | `rootfs/desktop/` |
-| Accelerated browser | ✅ WebKitGTK 4.1 / GTK 3 (luakit, surf) | Chromium needs GLES 3.0 → software only |
+| Accelerated browser | ✅ WebKitGTK 4.1 / GTK 3 (luakit, surf) | Chromium and Firefox need GLES 3.0 → software only; the gap is in [`docs/chromium-gles3-gap.md`](docs/chromium-gles3-gap.md) |
 | Audio (Realtek RT5640 + Intel SST DSP) | ❌ in progress | codec answers on I2C-5 `0x1c`; DSP RAM not powered yet (`docs/audio-sst-cloverview.md`) |
 | Cameras (OV8830 / OV2720 via ISP2300) | ❌ | ISP firmware `shisp_css15.bin` is not in linux-firmware; mainline `atomisp` only covers ISP2400/2401 |
 | RTC | ❌ | no `/dev/rtc`; time comes from NTP |
-| Suspend / lid / deep C-states | ❌ | needs `idle=poll`; lid handling disabled |
+| Suspend / lid / deep C-states | ❌ | needs `idle=poll`; s2idle never resumes, with or without the GPU driver (`results/s2idle-*.txt`); lid handling disabled |
 
 ### Measured
 
 - GPU: `kmscube` OK, `glmark2-es2-drm` score 82 (build 87, texture 112, phong 60),
   Xorg glamor + `glxgears` ~37 FPS, `mpv` YouTube 480p30 over DRM: 1 dropped frame in 45 s, 28 % CPU.
-- GPU, with the fork's v0.2.1 and HIGHMEM buffers: `glxgears` 37 → 52-61 FPS,
-  `mpv` 720p30 in X11 52 → 7 dropped frames per 30 s, `glmark2-es2-drm` score 69
-  (2 scenes unsupported, was 8), 50/50 uAPI tests, 0 GPU page faults, 0 kernel
-  oops. `luakit`: CSS 61.5, canvas 9.5, WebGL 9.8-14 FPS.
+- GPU, upstream `dev` + the Clover Trail PRs + HIGHMEM buffers: `glxgears` 37 → 62 FPS,
+  `mpv` 720p30 in X11 52 → 2 dropped frames per 30 s (2 on DRM), `glmark2-es2-drm`
+  69 (2 scenes unsupported, was 8), uAPI 50/50, frame 100/100, blit and hang tests
+  all right, 0 GPU page faults, 0 kernel oops. `luakit`: CSS 61.8, canvas 13.7,
+  WebGL 14.2 FPS (was 8). All runs: `results/bench-2026-11-16.txt`; the scripts are
+  in `gpu/bench/` (`sgx-try.sh` loads a driver build without installing it).
 - Browser (WebKitGTK, 1280×740): CSS animation 57.7 FPS; canvas and WebGL ~7 FPS (still CPU copies).
 - eMMC: 23 MB/s → 32-44 MB/s raw with the 8-bit bus. Boot to desktop ~19 s.
 
@@ -51,7 +53,9 @@ oopses on a HIGHMEM page in a page array, and PAT never records its memory
 type, so the write-combined user mapping silently becomes write-back and the
 GPU reads stale memory (continuous GPU page faults, device resets). Both
 patches are in `kernel/7.x/patches/lkml/` ready to send upstream, and the
-driver's `highmem` parameter is off by default for kernels without them.
+driver's `highmem` parameter is off by default for kernels without them. The
+oops and the fault storm they fix: `results/oops-cpa-highmem.txt`,
+`results/gpu-faults-pat-missing.txt`.
 
 ## Layout
 
@@ -63,6 +67,7 @@ rootfs/           mmdebstrap build + customisation, X11/lightdm/Xfce configs
 gpu/              loader and uAPI test build for powervr_sgx
 tools/sgx-ident/  read-only SGX core identification (freestanding i386)
 research/         audio DMA probes, GPIO inventory, GPU and camera plans
+results/          benchmark runs and the kernel/GPU logs behind the fixes
 docs/             lab notes: ACPI/DSDT, audio, boot, performance, desktop
 ```
 

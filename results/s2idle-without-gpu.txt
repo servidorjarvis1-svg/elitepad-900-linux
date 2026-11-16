@@ -1,0 +1,8 @@
+[   12.358087] ath6kl: invalid multicast filter address
+[   12.358119] ath6kl: Failed to add multicast filter :01:80:c2:00:00:00
+[   13.510075] systemd-journald[188]: File /var/log/journal/2e903422a2e14749b073aa574d42f985/user-1000.journal corrupted or uncleanly shut down, renaming and replacing.
+[   83.099497] PM: suspend entry (s2idle)
+[   83.125028] Filesystems sync: 0.025 seconds
+[   83.131547] Freezing user space processes
+Read from remote host 192.168.1.195: Connection reset by peer
+client_loop: send disconnect: Broken pipe

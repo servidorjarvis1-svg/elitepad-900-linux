@@ -1,0 +1,8 @@
+[ 4117.351089] powervr_sgx 0000:00:02.0: [drm] SGX core id 0x01150000 revision 0x0001000e: Intel Clover Trail (SGX545 1.0.14, 533 MHz)
+[ 4117.353436] powervr_sgx 0000:00:02.0: [drm] powervr_sgx/sgx545_ukernel.bin: open microkernel dev, interface 1.0, features 0x2
+[ 4117.355889] powervr_sgx 0000:00:02.0: [drm] microkernel started
+[ 4117.357235] [drm] Initialized powervr_sgx 1.0.0 for 0000:00:02.0 on minor 1
+[ 4119.712926] PM: suspend entry (s2idle)
+[ 4119.790310] Filesystems sync: 0.077 seconds
+Read from remote host 192.168.1.195: Connection reset by peer
+client_loop: send disconnect: Broken pipe

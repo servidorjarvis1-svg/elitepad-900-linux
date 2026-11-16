@@ -1,0 +1,58 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>cargando</title>
+<style>
+body{margin:0;background:#1d2430;overflow:hidden;font-family:sans-serif;color:#fff}
+.b{position:absolute;width:60px;height:60px;border-radius:10px;opacity:.85;
+   animation:mv 2s linear infinite alternate}
+@keyframes mv{from{transform:translate(0,0) rotate(0)}to{transform:translate(500px,250px) rotate(360deg)}}
+canvas{position:absolute;left:0;top:0}
+</style></head><body>
+<script>
+// Prueba de fluidez: #css (80 cajas animadas con transform), #canvas (canvas 2D), #webgl (WebGL 1).
+// Cuenta fotogramas con requestAnimationFrame durante 10 s y pone el resultado en el título.
+const modo = location.hash.slice(1) || 'css';
+const W = innerWidth, H = innerHeight;
+let draw = () => {};
+if (modo === 'css') {
+  for (let i = 0; i < 80; i++) {
+    const d = document.createElement('div'); d.className = 'b';
+    d.style.left = (i % 10) * 70 + 'px'; d.style.top = Math.floor(i / 10) * 60 + 'px';
+    d.style.background = `hsl(${i * 4.5},80%,55%)`; d.style.animationDelay = (-i * 0.05) + 's';
+    document.body.appendChild(d);
+  }
+} else if (modo === 'canvas') {
+  const c = document.createElement('canvas'); c.width = W; c.height = H; document.body.appendChild(c);
+  const g = c.getContext('2d'); let t = 0;
+  draw = () => {
+    t += 0.03; g.fillStyle = '#1d2430'; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 300; i++) {
+      g.fillStyle = `hsl(${(i * 7 + t * 50) % 360},80%,55%)`;
+      g.beginPath(); g.arc(W / 2 + Math.cos(t + i) * i * 1.5, H / 2 + Math.sin(t * 1.3 + i) * i, 12, 0, 6.283); g.fill();
+    }
+  };
+} else if (modo === 'webgl') {
+  const c = document.createElement('canvas'); c.width = W; c.height = H; document.body.appendChild(c);
+  const gl = c.getContext('webgl');
+  if (!gl) { document.title = 'WEBGL=NO'; fetch('http://127.0.0.1:8765/r?WEBGL=NO', {mode: 'no-cors'}); throw 0; }
+  const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; };
+  const p = gl.createProgram();
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, 'attribute vec2 a;uniform float t;varying vec3 c;void main(){float s=sin(t),k=cos(t);gl_Position=vec4(a.x*k-a.y*s,a.x*s+a.y*k,0,1);c=vec3(a*.5+.5,.7);}'));
+  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, 'precision mediump float;varying vec3 c;void main(){gl_FragColor=vec4(c,1);}'));
+  gl.linkProgram(p); gl.useProgram(p);
+  const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, .8, -.7, -.6, .7, -.6]), gl.STATIC_DRAW);
+  const a = gl.getAttribLocation(p, 'a'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+  const u = gl.getUniformLocation(p, 't'); let t = 0;
+  window.glinfo = gl.getParameter(gl.RENDERER);
+  draw = () => { t += 0.03; gl.clearColor(.11, .14, .19, 1); gl.clear(gl.COLOR_BUFFER_BIT); gl.uniform1f(u, t); gl.drawArrays(gl.TRIANGLES, 0, 3); };
+}
+let n = 0, t0 = 0;
+function f(ts) {
+  if (!t0) t0 = ts;
+  draw(); n++;
+  const s = (ts - t0) / 1000;
+  if (s < 10) { document.title = 'midiendo ' + s.toFixed(0); requestAnimationFrame(f); }
+  else { document.title = 'FPS=' + (n / s).toFixed(1) + (window.glinfo ? ' GL=' + window.glinfo : ''); fetch('http://127.0.0.1:8765/r?' + encodeURIComponent(document.title), {mode: 'no-cors'}); }
+}
+setTimeout(() => requestAnimationFrame(f), 3000);
+</script></body></html>

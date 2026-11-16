@@ -1,0 +1,74 @@
+### antes
+[18:00:21] == antes  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[18:00:39] luakit css: FPS=61.6
+[18:01:07] luakit canvas: FPS=8.0
+[18:01:33] luakit webgl: FPS=8.0 GL=WebKit WebGL
+[18:01:49] glxgears: 37.055 FPS
+[18:02:22] mpv x11 720p30 30s: Dropped: 52
+[18:07:36] glmark2:                                   glmark2 Score: 72   fallos: 8
+[18:08:08] mpv drm 720p30 30s: Dropped: 3
+[18:08:09] uapi: 40/40 passed
+[18:08:09] frame: 100/100 frames right
+[18:08:09] irqs: 94214
+[18:08:09] dmesg powervr: 0
+### v021
+[18:20:17] == v021  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[18:20:53] luakit css: sin resultado
+[18:21:29] luakit canvas: sin resultado
+[18:22:06] luakit webgl: sin resultado
+[18:22:23] glxgears: 59.365 FPS
+[18:22:56] mpv x11 720p30 30s: Dropped: 2
+[18:26:25] glmark2:   fallos: 0
+[18:26:44] mpv drm 720p30 30s: 
+### v021-highmem
+[20:47:43] == v021-highmem  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[20:48:03] luakit css: FPS=61.5
+[20:48:27] luakit canvas: FPS=9.5
+[20:48:52] luakit webgl: FPS=9.8 GL=WebKit WebGL
+[20:49:08] glxgears: 61.542 FPS
+[20:49:42] mpv x11 720p30 30s: Dropped: 7
+[20:55:18] glmark2:                                   glmark2 Score: 69   fallos: 2
+[20:55:52] mpv drm 720p30 30s: Dropped: 3
+[20:55:53] uapi: 50/50 passed
+[20:55:53] frame: 100/100 frames right
+[20:55:53] irqs: 41046
+[20:55:53] dmesg powervr: 0
+### review
+[21:53:10] == review  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[21:53:32] luakit css: FPS=60.9
+[21:53:57] luakit canvas: FPS=9.2
+[21:54:23] luakit webgl: FPS=10.0 GL=WebKit WebGL
+[21:54:39] glxgears: 62.268 FPS
+[21:55:13] mpv x11 720p30 30s: Dropped: 3
+[22:00:50] glmark2:                                   glmark2 Score: 69   fallos: 2
+[22:01:24] mpv drm 720p30 30s: Dropped: 3
+[22:01:24] uapi: 50/50 passed
+[22:01:24] frame: 100/100 frames right
+[22:01:25] irqs: 39053
+[22:01:25] dmesg powervr: 0
+### review-mesa
+[22:02:00] == review-mesa  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[22:02:21] luakit css: FPS=61.7
+[22:02:47] luakit canvas: FPS=9.2
+[22:03:12] luakit webgl: FPS=9.6 GL=WebKit WebGL
+[22:03:28] glxgears: 58.768 FPS
+[22:04:01] mpv x11 720p30 30s: Dropped: 5
+[22:09:38] glmark2:                                   glmark2 Score: 65   fallos: 2
+[22:10:12] mpv drm 720p30 30s: Dropped: 3
+[22:10:13] uapi: 50/50 passed
+[22:10:13] frame: 100/100 frames right
+[22:10:13] irqs: 77003
+[22:10:13] dmesg powervr: 0
+### devtest
+[22:49:43] == devtest  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[22:50:03] luakit css: FPS=61.8
+[22:50:26] luakit canvas: FPS=13.7
+[22:50:49] luakit webgl: FPS=14.2 GL=WebKit WebGL
+[22:51:05] glxgears: 61.696 FPS
+[22:51:39] mpv x11 720p30 30s: Dropped: 2
+[22:57:14] glmark2:                                   glmark2 Score: 69   fallos: 2
+[22:57:47] mpv drm 720p30 30s: Dropped: 2
+[22:57:47] uapi: 50/50 passed
+[22:57:47] frame: 100/100 frames right
+[22:57:48] irqs: 39823
+[22:57:48] dmesg powervr: 0

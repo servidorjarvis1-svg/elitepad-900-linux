@@ -1,0 +1,53 @@
+[    38.457] 	ABI class: X.Org ANSI C Emulation, version 0.4
+[   38.646753] powervr_sgx 0000:00:02.0: [drm] parameter buffer: 0x1022 pages
+[   38.663501] BUG: kernel NULL pointer dereference, address: 00000000
+[   38.663532] #PF: supervisor read access in kernel mode
+[   38.663541] #PF: error_code(0x0000) - not-present page
+[   38.663549] *pde = 00000000 
+[   38.663563] Oops: Oops: 0000 [#1] SMP
+[   38.663579] CPU: 2 UID: 0 PID: 886 Comm: Xorg Tainted: G           O        7.3.4-elitepad #5 PREEMPT(lazy) 
+[   38.663594] Tainted: [O]=OOT_MODULE
+[   38.663601] Hardware name: Hewlett-Packard HP ElitePad 900/18DC, BIOS 68CUA Ver. F.54 05/29/2015
+[   38.663610] EIP: __cpa_process_fault+0x340/0x370
+[   38.663632] Code: 24 08 8b 75 dc 89 0c 24 89 74 24 04 8b 4d e0 8b 55 ec 89 d8 e8 41 fa ff ff 85 c0 0f 88 31 fe ff ff 01 c7 e9 26 fe ff ff 8b 03 <8b> 00 c7 04 24 70 8b 13 d7 89 44 24 08 8b 45 e8 89 44 24 04 e8 67
+[   38.663643] EAX: 00000000 EBX: cc3a1b98 ECX: 00000001 EDX: 00000000
+[   38.663652] ESI: 00000000 EDI: cc3a1b34 EBP: cc3a1ae4 ESP: cc3a1aac
+[   38.663662] DS: 007b ES: 007b FS: 00d8 GS: 0033 SS: 0068 EFLAGS: 00010213
+[   38.663673] CR0: 80050033 CR2: 00000000 CR3: 12573000 CR4: 000006d0
+[   38.663683] Call Trace:
+[   38.663694]  ? shmem_inode_acct_blocks+0xec/0x170
+[   38.663714]  ? xas_load+0x11/0xd0
+[   38.663729]  __change_page_attr_set_clr+0x74d/0x9f0
+[   38.663742]  ? __purge_vmap_area_lazy+0x140/0x3a0
+[   38.663757]  ? folio_mkclean+0x30/0xb0
+[   38.663770]  change_page_attr_set_clr+0xe6/0x510
+[   38.663785]  _set_pages_array+0xbb/0x170
+[   38.663799]  set_pages_array_wc+0xd/0x10
+[   38.663813]  drm_gem_shmem_get_pages_locked+0x86/0xd0
+[   38.663833]  drm_gem_shmem_mmap+0x7f/0xe0
+[   38.663849]  pvrsgx_gem_mmap+0x22/0x30 [powervr_sgx]
+[   38.663880]  drm_gem_mmap_obj+0x5a/0x130
+[   38.663894]  drm_gem_mmap+0x30/0xa0
+[   38.663906]  ? drm_gem_mmap_obj+0x130/0x130
+[   38.663919]  __mmap_region+0x73d/0xd50
+[   38.663934]  ? radix_tree_node_alloc.constprop.0+0x8c/0xd0
+[   38.663962]  mmap_region+0xf0/0x120
+[   38.663975]  ? __get_unmapped_area+0x66/0xf0
+[   38.663989]  do_mmap+0x4ce/0x5b0
+[   38.664004]  vm_mmap_pgoff+0xbf/0x160
+[   38.664019]  ksys_mmap_pgoff+0xcc/0x1e0
+[   38.664032]  __ia32_sys_mmap_pgoff+0x2c/0x40
+[   38.664045]  ia32_sys_call+0x2475/0x24d0
+[   38.664058]  __do_fast_syscall_32+0xd6/0x540
+[   38.664074]  do_fast_syscall_32+0x29/0x60
+[   38.664088]  do_SYSENTER_32+0x15/0x20
+[   38.664101]  entry_SYSENTER_32+0xa6/0x115
+[   38.664114] EIP: 0xb7eccd6c
+[   38.664125] Code: c0 90 85 c9 74 0a 89 c3 81 e3 ff 0f 00 00 89 19 85 d2 74 05 c1 e8 0c 89 02 5b 31 c0 5d c3 8d 76 00 51 52 55 89 e5 0f 34 cd 80 <5d> 5a 59 c3 90 8d 76 00 58 b8 77 00 00 00 cd 80 0f 0b 90 90 b8 ad
+[   38.664136] EAX: ffffffda EBX: 00000000 ECX: 00a00000 EDX: 00000003
+[   38.664145] ESI: 00000001 EDI: 00000014 EBP: 00010000 ESP: bf973cf0
+[   38.664154] DS: 007b ES: 007b FS: 0000 GS: 0033 SS: 007b EFLAGS: 00000206
+[   38.664169] Modules linked in: powervr_sgx(O) drm_gpuvm drm_exec gpu_sched efivarfs [last unloaded: powervr_sgx]
+[   38.664204] CR2: 0000000000000000
+[   38.664215] ---[ end trace 0000000000000000 ]---
+[   38.664223] EIP: __cpa_process_fault+0x340/0x370
