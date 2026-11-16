@@ -21,7 +21,8 @@ Everything here was tested on real hardware. Lab notes are in Spanish (`docs/`,
 | WiFi (Atheros AR6004, SDIO) | ✅ | patch 0006 (SDIO 1.8 V) + `firmware-atheros` |
 | eMMC 8-bit bus | ✅ 1.4-1.9× faster | patch 0007, `sdhci_acpi.ctv_emmc=1` |
 | Reboot | ✅ | patch 0003 (cold reset through the SCU IPC mailbox) |
-| GPU PowerVR SGX545 (`8086:08cf`) | ✅ GLES 2.0 | [powervr_sgx fork, branch `clovertrail`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/clovertrail) + Mesa `sgx` i386 |
+| GPU PowerVR SGX545 (`8086:08cf`) | ✅ GLES 2.0 | [powervr_sgx fork, branch `clovertrail-v0.2`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/clovertrail-v0.2) + Mesa `sgx` i386 |
+| GPU buffers in HIGHMEM | ✅ 1.4-1.7× faster, and lowmem stays free | patches 0008-0009 (`kernel/7.x/patches/lkml/`) + `powervr_sgx.highmem=1` |
 | Desktop | ✅ Xfce on X11, glamor on the SGX545 | `rootfs/desktop/` |
 | Accelerated browser | ✅ WebKitGTK 4.1 / GTK 3 (luakit, surf) | Chromium needs GLES 3.0 → software only |
 | Audio (Realtek RT5640 + Intel SST DSP) | ❌ in progress | codec answers on I2C-5 `0x1c`; DSP RAM not powered yet (`docs/audio-sst-cloverview.md`) |
@@ -33,8 +34,24 @@ Everything here was tested on real hardware. Lab notes are in Spanish (`docs/`,
 
 - GPU: `kmscube` OK, `glmark2-es2-drm` score 82 (build 87, texture 112, phong 60),
   Xorg glamor + `glxgears` ~37 FPS, `mpv` YouTube 480p30 over DRM: 1 dropped frame in 45 s, 28 % CPU.
+- GPU, with the fork's v0.2.1 and HIGHMEM buffers: `glxgears` 37 → 52-61 FPS,
+  `mpv` 720p30 in X11 52 → 7 dropped frames per 30 s, `glmark2-es2-drm` score 69
+  (2 scenes unsupported, was 8), 50/50 uAPI tests, 0 GPU page faults, 0 kernel
+  oops. `luakit`: CSS 61.5, canvas 9.5, WebGL 9.8-14 FPS.
 - Browser (WebKitGTK, 1280×740): CSS animation 57.7 FPS; canvas and WebGL ~7 FPS (still CPU copies).
 - eMMC: 23 MB/s → 32-44 MB/s raw with the 8-bit bus. Boot to desktop ~19 s.
+
+### Why the kernel needs patches 0008-0009
+
+A 32-bit kernel without PAE has no `ZONE_DMA32`, so a 32-bit GPU MMU that can
+reach every page below 4 GiB ends up keeping all its buffers in ~830 MB of
+lowmem: a browser takes `LowFree` from 483 MB to 7 MB and the kernel starts
+killing processes. Moving them to HIGHMEM hits two kernel bugs instead — CPA
+oopses on a HIGHMEM page in a page array, and PAT never records its memory
+type, so the write-combined user mapping silently becomes write-back and the
+GPU reads stale memory (continuous GPU page faults, device resets). Both
+patches are in `kernel/7.x/patches/lkml/` ready to send upstream, and the
+driver's `highmem` parameter is off by default for kernels without them.
 
 ## Layout
 
@@ -54,7 +71,8 @@ docs/             lab notes: ACPI/DSDT, audio, boot, performance, desktop
 1. Kernel: download Linux 7.3.4, apply `kernel/7.x/patches/*`, run
    `kernel/7.x/config-elitepad-7.x.sh <tree>`, `make ARCH=i386 bzImage modules`.
 2. GPU: build `drm/powervr_sgx` and Mesa (`mesa/build.sh i386-x11`) from the
-   powervr_sgx fork, branch `clovertrail`.
+   powervr_sgx fork, branch `clovertrail-v0.2`, and load the module with
+   `highmem=1` on a kernel that has patches 0008-0009.
 3. initramfs: `boot/initramfs/build-initramfs.sh` (needs i386 busybox-static and
    dropbear unpacked from Debian `.deb`s; set `SSH_PUBKEY`).
 4. Root fs: `rootfs/build-rootfs.sh` then `rootfs/customize.sh`, then

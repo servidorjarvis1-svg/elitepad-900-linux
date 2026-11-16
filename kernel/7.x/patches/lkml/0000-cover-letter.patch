@@ -1,0 +1,17 @@
+From befc9a70535479b4e55d8f77f15662023da5f781 Mon Sep 17 00:00:00 2001
+From: Christian <servidorjarvis1-svg@users.noreply.github.com>
+Date: Mon, 16 Nov 2026 20:42:24 +0100
+Subject: [PATCH 0/2] *** SUBJECT HERE ***
+
+*** BLURB HERE ***
+
+Christian (2):
+  x86/mm/pat: skip HIGHMEM pages in a page array
+  x86/mm/pat: track the memory type of HIGHMEM pages in a page array
+
+ arch/x86/mm/pat/set_memory.c | 22 ++++++++++++++++------
+ 1 file changed, 16 insertions(+), 6 deletions(-)
+
+-- 
+2.47.3
+

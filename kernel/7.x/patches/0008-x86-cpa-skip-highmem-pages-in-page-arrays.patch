@@ -1,0 +1,54 @@
+From d5adf008cd045ead6d2daa58afad19145ccb7b4e Mon Sep 17 00:00:00 2001
+From: Christian <servidorjarvis1-svg@users.noreply.github.com>
+Date: Mon, 16 Nov 2026 20:42:24 +0100
+Subject: [PATCH 1/2] x86/mm/pat: skip HIGHMEM pages in a page array
+
+set_pages_array_wc() walks a page array through __cpa_addr(), which
+returns 0 for a HIGHMEM page because it has no linear mapping.
+__cpa_process_fault() then takes that 0 for a virtual address and
+dereferences it in its warning path, so changing a HIGHMEM page's
+caching oopses with a NULL pointer dereference, with the CPA lock held:
+every later CPA user (installing a seccomp filter, for one) then spins
+forever.
+
+_set_pages_array() already skips HIGHMEM pages when it reserves their
+memory type, so skip them here as well, and take the pfn from the array:
+that is where the primary path reads its page from, and
+cpa_process_alias() must not derive an address for a page that has none.
+
+Measured on an HP ElitePad 900 G1 (Atom Z2760, i386 without PAE, kernel
+7.3.4) with a graphics driver that keeps its buffers in HIGHMEM: every
+buffer oopsed in set_pages_array_wc() -> drm_gem_shmem_get_pages_locked(),
+and the machine stayed up but became unreachable.
+
+Signed-off-by: Christian <servidorjarvis1-svg@users.noreply.github.com>
+---
+ arch/x86/mm/pat/set_memory.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/x86/mm/pat/set_memory.c b/arch/x86/mm/pat/set_memory.c
+index c71f677..8675447 100644
+--- a/arch/x86/mm/pat/set_memory.c
++++ b/arch/x86/mm/pat/set_memory.c
+@@ -1847,6 +1847,18 @@ static int __cpa_process_fault(struct cpa_data *cpa, unsigned long vaddr,
+ 		return 0;
+ 	}
+ 
++	/*
++	 * A HIGHMEM page in a page array has no linear mapping, so there is
++	 * nothing to change: __cpa_addr() gives 0 for it. Skip it, as
++	 * _set_pages_array() already skips its memtype reservation. Its pfn
++	 * keeps cpa_process_alias() off the direct map: the page isn't there.
++	 */
++	if ((cpa->flags & CPA_PAGES_ARRAY) && !vaddr) {
++		cpa->numpages = 1;
++		cpa->pfn = page_to_pfn(cpa->pages[cpa->curpage]);
++		return 0;
++	}
++
+ 	/*
+ 	 * Ignore the NULL PTE for kernel identity mapping, as it is expected
+ 	 * to have holes.
+-- 
+2.47.3
+

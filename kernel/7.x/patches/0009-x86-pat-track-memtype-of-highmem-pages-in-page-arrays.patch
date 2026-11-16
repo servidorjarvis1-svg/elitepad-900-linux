@@ -1,0 +1,63 @@
+From befc9a70535479b4e55d8f77f15662023da5f781 Mon Sep 17 00:00:00 2001
+From: Christian <servidorjarvis1-svg@users.noreply.github.com>
+Date: Mon, 16 Nov 2026 20:42:24 +0100
+Subject: [PATCH 2/2] x86/mm/pat: track the memory type of HIGHMEM pages in a
+ page array
+
+_set_pages_array() reserves a memory type only for pages that are not
+HIGHMEM, and set_pages_array_wb() frees it only for those. The reservation
+is what makes PAT apply the type to user mappings of the page; it is not
+the CPA walk, which has nothing to change on a page without a linear
+mapping.
+
+Without it a driver that keeps its buffers in HIGHMEM gets a
+write-combined user mapping that PAT leaves as write-back, so the CPU
+keeps its writes in cache and a device that does not snoop them reads
+stale memory. With the graphics driver on the ElitePad that showed up as
+continuous GPU page faults and microkernel resets until the device wedged;
+the same driver with its buffers in lowmem had none.
+
+Signed-off-by: Christian <servidorjarvis1-svg@users.noreply.github.com>
+---
+ arch/x86/mm/pat/set_memory.c | 10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/arch/x86/mm/pat/set_memory.c b/arch/x86/mm/pat/set_memory.c
+index 8675447..e1666c2 100644
+--- a/arch/x86/mm/pat/set_memory.c
++++ b/arch/x86/mm/pat/set_memory.c
+@@ -2579,9 +2579,11 @@ static int _set_pages_array(struct page **pages, int numpages,
+ 	int free_idx;
+ 	int ret;
+ 
++	/*
++	 * HIGHMEM pages get their memory type too: CPA has no linear mapping of
++	 * theirs to change, but PAT applies the type to user mappings of them.
++	 */
+ 	for (i = 0; i < numpages; i++) {
+-		if (PageHighMem(pages[i]))
+-			continue;
+ 		start = page_to_pfn(pages[i]) << PAGE_SHIFT;
+ 		end = start + PAGE_SIZE;
+ 		if (memtype_reserve(start, end, new_type, NULL))
+@@ -2606,8 +2608,6 @@ static int _set_pages_array(struct page **pages, int numpages,
+ err_out:
+ 	free_idx = i;
+ 	for (i = 0; i < free_idx; i++) {
+-		if (PageHighMem(pages[i]))
+-			continue;
+ 		start = page_to_pfn(pages[i]) << PAGE_SHIFT;
+ 		end = start + PAGE_SIZE;
+ 		memtype_free(start, end);
+@@ -2649,8 +2649,6 @@ int set_pages_array_wb(struct page **pages, int numpages)
+ 		return retval;
+ 
+ 	for (i = 0; i < numpages; i++) {
+-		if (PageHighMem(pages[i]))
+-			continue;
+ 		start = page_to_pfn(pages[i]) << PAGE_SHIFT;
+ 		end = start + PAGE_SIZE;
+ 		memtype_free(start, end);
+-- 
+2.47.3
+
