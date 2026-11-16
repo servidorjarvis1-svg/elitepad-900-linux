@@ -1,0 +1,153 @@
+#!/bin/busybox sh
+# init del entorno de desarrollo FRIDAY para la HP ElitePad 900 G1
+# Objetivo: arrancar, levantar la Ethernet del dock, abrir SSH y dejar logs en el NTFS de Windows.
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+/bin/busybox --install -s
+mkdir -p /proc /sys /dev /run /tmp /mnt/c /root /var/log /dev/pts
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mount -t devtmpfs dev /dev 2>/dev/null
+mkdir -p /dev/pts && mount -t devpts devpts /dev/pts
+mount -t tmpfs tmpfs /run
+mount -t tmpfs tmpfs /tmp
+mkdir -p /sys/kernel/debug && mount -t debugfs debugfs /sys/kernel/debug 2>/dev/null
+hostname elitepad
+echo 8 > /proc/sys/kernel/printk
+
+LOG=/run/friday.log
+say() { echo "[FRIDAY $(cut -d' ' -f1 /proc/uptime)s] $*" | tee -a $LOG > /dev/console; }
+
+say "init arrancado, kernel $(uname -r)"
+
+# --- 1. Disco de Windows (NTFS) para dejar logs persistentes ---
+LOGDIR=""
+for i in $(seq 1 20); do
+  for p in /dev/mmcblk0p*; do
+    [ -b "$p" ] || continue
+    if mount -t ntfs3 -o rw "$p" /mnt/c 2>/dev/null; then
+      if [ -d /mnt/c/ubuntu ]; then LOGDIR=/mnt/c/ubuntu/friday-dev/logs; break 2; fi
+      umount /mnt/c
+    fi
+  done
+  sleep 1
+done
+# --- 1b. Debian en C:\ubuntu\disks\root.disk: solo si existe el marcador de un solo uso ---
+# C:\ubuntu\friday-dev\boot-debian -> se borra ya (el siguiente arranque vuelve aqui) y se pasa al Debian.
+# Cualquier fallo: se sigue con este entorno (busybox + SSH) como siempre.
+FLAG=/mnt/c/ubuntu/friday-dev/boot-debian
+ROOTDISK=/mnt/c/ubuntu/disks/root.disk
+if [ -n "$LOGDIR" ] && [ -f "$FLAG" ]; then
+  rm -f "$FLAG"; sync
+  say "marcador boot-debian encontrado (borrado): monto root.disk"
+  mkdir -p /newroot
+  if mount -t ext4 -o loop,rw,noatime "$ROOTDISK" /newroot && [ -x /newroot/usr/lib/systemd/systemd ]; then
+    # vuelta al initramfs al apagar (systemd ejecuta /run/initramfs/shutdown): desmonta loop y NTFS limpios
+    mkdir -p /run/initramfs/bin /run/initramfs/oldroot /run/initramfs/host /run/initramfs/proc /run/initramfs/sys /run/initramfs/dev
+    cp /bin/busybox /run/initramfs/bin/busybox
+    ln -sf busybox /run/initramfs/bin/sh
+    cp /shutdown /run/initramfs/shutdown; chmod +x /run/initramfs/shutdown
+    dmesg > /mnt/c/ubuntu/friday-dev/logs/initramfs-debian.txt; cp $LOG /mnt/c/ubuntu/friday-dev/logs/initramfs-debian.log; sync
+    mkdir -p /newroot/host
+    mount -o move /mnt/c /newroot/host
+    for m in dev proc sys run; do mkdir -p /newroot/$m; mount -o move /$m /newroot/$m; done
+    echo 4 > /newroot/proc/sys/kernel/printk
+    exec switch_root /newroot /sbin/init
+  fi
+  say "AVISO: no he podido montar root.disk o falta /sbin/init: sigo en el entorno de desarrollo"
+  umount /newroot 2>/dev/null
+fi
+
+if [ -n "$LOGDIR" ]; then
+  mkdir -p $LOGDIR
+  N=$(ls $LOGDIR | grep -c '^arranque-' )
+  RUN=$LOGDIR/arranque-$(printf %03d $((N+1)))
+  mkdir -p $RUN
+  say "logs en C:\\ubuntu\\friday-dev\\logs\\$(basename $RUN)"
+  # volcado continuo: dmesg y log propio cada 2 s, con sync
+  ( while true; do dmesg > $RUN/dmesg.txt; cp $LOG $RUN/friday.log; cat /proc/interrupts > $RUN/interrupts.txt; sync; sleep 2; done ) &
+  LOGGER=$!
+else
+  say "AVISO: no he podido montar el NTFS de Windows (sin logs persistentes)"
+fi
+
+# --- 2. Red: Ethernet del dock (smsc95xx) o la que aparezca ---
+mkdir -p /usr/share/udhcpc
+cat > /usr/share/udhcpc/default.script <<'EOF'
+#!/bin/sh
+case "$1" in
+  bound|renew)
+    ip addr flush dev "$interface"
+    ip addr add "$ip/${mask:-24}" dev "$interface"
+    [ -n "$router" ] && ip route add default via ${router%% *} dev "$interface"
+    : > /etc/resolv.conf
+    for d in $dns; do echo "nameserver $d" >> /etc/resolv.conf; done
+    ;;
+esac
+EOF
+chmod +x /usr/share/udhcpc/default.script
+
+IFACE=""
+for i in $(seq 1 40); do
+  for n in /sys/class/net/*; do
+    n=$(basename $n)
+    # solo Ethernet real: type 1 (ARPHRD_ETHER) y con dispositivo fisico detras (descarta lo, sit0, tunl0...)
+    [ "$(cat /sys/class/net/$n/type 2>/dev/null)" = 1 ] || continue
+    [ -e /sys/class/net/$n/device ] || continue
+    IFACE=$n; break 2
+  done
+  sleep 1
+done
+if [ -n "$IFACE" ]; then
+  ip link set lo up
+  ip link set "$IFACE" up
+  say "interfaz de red: $IFACE ($(cat /sys/class/net/$IFACE/address))"
+  udhcpc -i "$IFACE" -t 20 -T 3 -b -s /usr/share/udhcpc/default.script >/dev/null 2>&1
+  sleep 3
+  say "IP: $(ip -4 addr show $IFACE | grep inet)"
+else
+  say "AVISO: no aparece ninguna interfaz de red"
+fi
+
+# --- 2b. WiFi (AR6004): si hay C:\ubuntu\friday-dev\wpa_supplicant.conf, conectar en segundo plano ---
+WPACONF=/mnt/c/ubuntu/friday-dev/wpa_supplicant.conf
+if [ -f "$WPACONF" ]; then
+  ( for i in $(seq 1 20); do [ -e /sys/class/net/wlan0 ] && break; sleep 1; done
+    if [ -e /sys/class/net/wlan0 ]; then
+      cp "$WPACONF" /run/wpa_supplicant.conf; chmod 600 /run/wpa_supplicant.conf
+      ip link set wlan0 up
+      wpa_supplicant -B -i wlan0 -c /run/wpa_supplicant.conf -P /run/wpa_supplicant.pid
+      udhcpc -i wlan0 -t 30 -T 3 -b -s /usr/share/udhcpc/default.script >/dev/null 2>&1
+      sleep 8; say "WiFi: $(ip -4 addr show wlan0 | grep inet)"
+    else
+      say "WiFi: no ha aparecido wlan0"
+    fi ) &
+fi
+
+# --- 3. SSH (dropbear, solo clave de FRIDAY) ---
+mkdir -p /etc/dropbear
+dropbear -R -E -s -p 22 2>>$LOG && say "SSH escuchando en el puerto 22"
+
+# --- 4. Estado a pantalla y shell local en el teclado del dock ---
+say "listo. Dispositivos USB:"
+for d in /sys/bus/usb/devices/*; do
+  [ -f $d/idVendor ] && echo "  $(basename $d) $(cat $d/idVendor):$(cat $d/idProduct) $(cat $d/product 2>/dev/null)"
+done | tee -a $LOG > /dev/console
+# --- 5. reboot/poweroff/halt de busybox: con PID 1 propio mandan TERM/USR2/USR1 a init ---
+apagar() {
+  say "init: $1 pedido, cerrando"
+  [ -n "$LOGGER" ] && kill $LOGGER 2>/dev/null
+  if [ -n "$RUN" ]; then
+    dmesg > $RUN/dmesg.txt; cp $LOG $RUN/friday.log; sync
+    mount -o remount,ro /mnt/c 2>/dev/null
+  fi
+  sync
+  $1 -f
+}
+trap 'apagar reboot' TERM
+trap 'apagar poweroff' USR2
+trap 'apagar halt' USR1
+
+# la shell local va en segundo plano: 'wait' es interrumpible y deja correr las traps
+( while true; do setsid cttyhack sh -l; sleep 1; done ) &
+while true; do wait; sleep 1; done

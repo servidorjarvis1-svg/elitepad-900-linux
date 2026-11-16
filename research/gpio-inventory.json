@@ -1,0 +1,597 @@
+[
+ {
+  "line": 2290,
+  "dev": "VPIO",
+  "meth": [
+   "_AEI"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "VPIO",
+  "pins": [
+   2
+  ],
+  "mode": "Edge, ActiveBoth, ExclusiveAndWake, PullDown, 0x0000"
+ },
+ {
+  "line": 2612,
+  "dev": "URT0.BTH0",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   40
+  ],
+  "mode": "Edge, ActiveLow, ExclusiveAndWake, PullUp, 0x0000"
+ },
+ {
+  "line": 2618,
+  "dev": "URT0.BTH0",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   14
+  ],
+  "mode": "Exclusive, PullUp, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 2684,
+  "dev": "URT1.GPS0",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   76
+  ],
+  "mode": "Exclusive, PullUp, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 2690,
+  "dev": "URT1.GPS0",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   12
+  ],
+  "mode": "Exclusive, PullDown, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 2771,
+  "dev": "GPO0",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO0",
+  "pins": [
+   60
+  ],
+  "mode": "Shared, PullUp, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 2780,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO0",
+  "pins": [
+   71
+  ],
+  "mode": "Shared, PullDefault, 0x0000, 0x0000, IoRestrictionInputOnly"
+ },
+ {
+  "line": 2820,
+  "dev": "",
+  "meth": [
+   "_AEI"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   35
+  ],
+  "mode": "Edge, ActiveBoth, ExclusiveAndWake, PullDefault, 0x4E20"
+ },
+ {
+  "line": 2826,
+  "dev": "",
+  "meth": [
+   "_AEI"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   71
+  ],
+  "mode": "Edge, ActiveBoth, SharedAndWake, PullDefault, 0x4E20"
+ },
+ {
+  "line": 2832,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   94
+  ],
+  "mode": "Level, ActiveLow, Shared, PullNone, 0x0001"
+ },
+ {
+  "line": 3051,
+  "dev": "GPO1",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO1",
+  "pins": [
+   37
+  ],
+  "mode": "Edge, ActiveBoth, Exclusive, PullNone, 0x03E8"
+ },
+ {
+  "line": 3097,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   16
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 3106,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   33
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 3115,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   58
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 3124,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   74
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 3144,
+  "dev": "PBAD",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   49
+  ],
+  "mode": "Edge, ActiveBoth, ExclusiveAndWake, PullDefault, 0x0000"
+ },
+ {
+  "line": 3150,
+  "dev": "PBAD",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   30
+  ],
+  "mode": "Edge, ActiveBoth, ExclusiveAndWake, PullDefault, 0x0000"
+ },
+ {
+  "line": 3156,
+  "dev": "PBAD",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   48
+  ],
+  "mode": "Edge, ActiveBoth, Exclusive, PullDefault, 0x09C4"
+ },
+ {
+  "line": 3162,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   31
+  ],
+  "mode": "Edge, ActiveBoth, Exclusive, PullDefault, 0x09C4"
+ },
+ {
+  "line": 3168,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   47
+  ],
+  "mode": "Edge, ActiveBoth, Exclusive, PullDefault, 0x1770"
+ },
+ {
+  "line": 3177,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   49
+  ],
+  "mode": "Edge, ActiveBoth, ExclusiveAndWake, PullDefault, 0x0000"
+ },
+ {
+  "line": 3183,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   30
+  ],
+  "mode": "Edge, ActiveBoth, ExclusiveAndWake, PullDefault, 0x0000"
+ },
+ {
+  "line": 3189,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   48
+  ],
+  "mode": "Edge, ActiveBoth, Exclusive, PullDefault, 0x09C4"
+ },
+ {
+  "line": 3195,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   31
+  ],
+  "mode": "Edge, ActiveBoth, Exclusive, PullDefault, 0x09C4"
+ },
+ {
+  "line": 3201,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO1",
+  "pins": [
+   61
+  ],
+  "mode": "Edge, ActiveBoth, Exclusive, PullDefault, 0x1770"
+ },
+ {
+  "line": 3820,
+  "dev": "I2C0.TCHP",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   62
+  ],
+  "mode": "Level, ActiveLow, Exclusive, PullNone, 0x0000"
+ },
+ {
+  "line": 3826,
+  "dev": "I2C0.TCHP",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   33
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4030,
+  "dev": "I2C1.NFC",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   33
+  ],
+  "mode": "Level, ActiveHigh, Exclusive, PullNone, 0x0000"
+ },
+ {
+  "line": 4036,
+  "dev": "I2C1.NFC",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   18
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4042,
+  "dev": "I2C1.NFC",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   15
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4288,
+  "dev": "I2C4.CAM0",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   81
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4419,
+  "dev": "CAM1",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   80
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4425,
+  "dev": "CAM1",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   82
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4546,
+  "dev": "STRB",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   65
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4552,
+  "dev": "STRB",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   63
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4558,
+  "dev": "STRB",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   79
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4564,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   32
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4570,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO1",
+  "pins": [
+   78
+  ],
+  "mode": "Exclusive, PullDefault, 0x0000, 0x0000, IoRestrictionOutputOnly"
+ },
+ {
+  "line": 4839,
+  "dev": "I2C5.SHUB",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   38
+  ],
+  "mode": "Level, ActiveLow, Exclusive, PullNone, 0x0000"
+ },
+ {
+  "line": 4870,
+  "dev": "RTEK",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   51
+  ],
+  "mode": "Edge, ActiveBoth, SharedAndWake, PullNone, 0x0000"
+ },
+ {
+  "line": 4876,
+  "dev": "RTEK",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   32
+  ],
+  "mode": "Edge, ActiveBoth, SharedAndWake, PullNone, 0x0000"
+ },
+ {
+  "line": 4882,
+  "dev": "RTEK",
+  "meth": [],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   34
+  ],
+  "mode": "Edge, ActiveBoth, SharedAndWake, PullNone, 0x0000"
+ },
+ {
+  "line": 4888,
+  "dev": "",
+  "meth": [],
+  "kind": "GpioIo",
+  "ctrl": "GPO0",
+  "pins": [
+   32,
+   34,
+   51
+  ],
+  "mode": "Shared, PullDefault, 0x0000, 0x0000, IoRestrictionInputOnly"
+ },
+ {
+  "line": 5183,
+  "dev": "AUD0",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   51
+  ],
+  "mode": "Edge, ActiveHigh, SharedAndWake, PullNone, 0xEA60"
+ },
+ {
+  "line": 5233,
+  "dev": "",
+  "meth": [
+   "_SRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   51
+  ],
+  "mode": "Edge, ActiveHigh, SharedAndWake, PullNone, 0xEA60"
+ },
+ {
+  "line": 5307,
+  "dev": "AUD1",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   51
+  ],
+  "mode": "Edge, ActiveHigh, ExclusiveAndWake, PullNone, 0xEA60"
+ },
+ {
+  "line": 5349,
+  "dev": "",
+  "meth": [
+   "_SRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   51
+  ],
+  "mode": "Edge, ActiveHigh, ExclusiveAndWake, PullNone, 0xEA60"
+ },
+ {
+  "line": 5418,
+  "dev": "SDC0",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   69
+  ],
+  "mode": "Edge, ActiveBoth, ExclusiveAndWake, PullNone, 0x2710"
+ },
+ {
+  "line": 5500,
+  "dev": "SDC1.QCA1",
+  "meth": [
+   "_CRS"
+  ],
+  "kind": "GpioInt",
+  "ctrl": "GPO0",
+  "pins": [
+   2
+  ],
+  "mode": "Edge, ActiveLow, ExclusiveAndWake, PullUp, 0x0000"
+ }
+]

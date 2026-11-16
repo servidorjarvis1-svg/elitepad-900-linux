@@ -1,0 +1,5 @@
+swaybg -c '#1d2430' &
+pcmanfm-qt --desktop &
+lxqt-panel &
+lxqt-notificationd &
+lxqt-policykit-agent &

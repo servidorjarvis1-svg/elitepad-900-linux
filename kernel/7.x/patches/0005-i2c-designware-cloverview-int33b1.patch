@@ -1,0 +1,69 @@
+--- a/drivers/i2c/busses/i2c-designware-platdrv.c
++++ b/drivers/i2c/busses/i2c-designware-platdrv.c
+@@ -8,6 +8,7 @@
+  * Copyright (C) 2007 MontaVista Software Inc.
+  * Copyright (C) 2009 Provigent Ltd.
+  */
++#include <linux/acpi.h>
+ #include <linux/clk-provider.h>
+ #include <linux/clk.h>
+ #include <linux/delay.h>
+@@ -37,6 +38,41 @@
+ 	return clk_get_rate(dev->clk) / HZ_PER_KHZ;
+ }
+ 
++/*
++ * Intel Cloverview (Clover Trail, INT33B1): no clock is exposed in ACPI and
++ * the DSDT has no SSCN/FMCN.  Input clock and SCL counts come from the Clover
++ * Trail+ reference (i2c-designware-pcidrv, cloverview_N): 17 MHz, except
++ * controller 3 (_UID 4) at 20.5 MHz.
++ */
++static u32 i2c_dw_clv_get_clk_rate_khz(struct dw_i2c_dev *dev)
++{
++	return acpi_dev_uid_match(ACPI_COMPANION(dev->dev), 4) ? 20500 : 17000;
++}
++
++static void i2c_dw_clv_configure(struct dw_i2c_dev *dev)
++{
++	if (dev->clk || !has_acpi_companion(dev->dev) ||
++	    !acpi_dev_hid_match(ACPI_COMPANION(dev->dev), "INT33B1"))
++		return;
++
++	dev->get_clk_rate_khz = i2c_dw_clv_get_clk_rate_khz;
++	/*
++	 * IC_COMP_PARAM_1 reads 0 on this IP (DW 1.08), which would size both
++	 * FIFOs to 1 entry.  Without IC_EMPTYFIFO_HOLD_MASTER the controller
++	 * then issues STOP after every byte and multi-byte reads return zeros.
++	 */
++	dev->tx_fifo_depth = 256;
++	dev->rx_fifo_depth = 256;
++	if (!dev->ss_hcnt || !dev->ss_lcnt) {
++		dev->ss_hcnt = 0x1ec;
++		dev->ss_lcnt = 0x1f3;
++	}
++	if (!dev->fs_hcnt || !dev->fs_lcnt) {
++		dev->fs_hcnt = 0x59;
++		dev->fs_lcnt = 0x98;
++	}
++}
++
+ static int dw_i2c_get_parent_regmap(struct dw_i2c_dev *dev)
+ {
+ 	dev->map = dev_get_regmap(dev->dev->parent, NULL);
+@@ -199,6 +235,8 @@
+ 				DIV_S64_ROUND_CLOSEST(clk_khz * t->sda_hold_ns, MICRO);
+ 	}
+ 
++	i2c_dw_clv_configure(dev);
++
+ 	adap = &dev->adapter;
+ 	adap->owner = THIS_MODULE;
+ 	adap->class = dmi_check_system(dw_i2c_hwmon_class_dmi) ?
+@@ -274,6 +312,7 @@
+ 	{ "HISI02A3", 0 },
+ 	{ "HJMC3001", ACCESS_INTR_MASK },
+ 	{ "HYGO0010", ACCESS_INTR_MASK },
++	{ "INT33B1", 0 },	/* Intel Cloverview */
+ 	{ "INT33C2", 0 },
+ 	{ "INT33C3", 0 },
+ 	{ "INT3432", 0 },

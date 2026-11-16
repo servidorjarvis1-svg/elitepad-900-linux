@@ -1,0 +1,364 @@
+--- a/drivers/gpio/Kconfig
++++ b/drivers/gpio/Kconfig
+@@ -233,6 +233,14 @@
+ 	help
+ 	  Say yes here to enable support for Cadence GPIO controller.
+ 
++config GPIO_CLOVERVIEW
++	bool "Intel Cloverview (Clover Trail) GPIO"
++	depends on ACPI && X86
++	select GPIOLIB_IRQCHIP
++	help
++	  GPIO controllers of the Intel Atom Z2760 (Clover Trail) SoC,
++	  described in ACPI as INT33B2 (AON and core banks, 96 pins each).
++
+ config GPIO_CLPS711X
+ 	tristate "CLPS711X GPIO support"
+ 	depends on ARCH_CLPS711X || COMPILE_TEST
+--- a/drivers/gpio/Makefile
++++ b/drivers/gpio/Makefile
+@@ -46,6 +46,7 @@
+ obj-$(CONFIG_GPIO_BRCMSTB)		+= gpio-brcmstb.o
+ obj-$(CONFIG_GPIO_BT8XX)		+= gpio-bt8xx.o
+ obj-$(CONFIG_GPIO_CADENCE)		+= gpio-cadence.o
++obj-$(CONFIG_GPIO_CLOVERVIEW)		+= gpio-cloverview.o
+ obj-$(CONFIG_GPIO_CLPS711X)		+= gpio-clps711x.o
+ obj-$(CONFIG_GPIO_SNPS_CREG)		+= gpio-creg-snps.o
+ obj-$(CONFIG_GPIO_CROS_EC)		+= gpio-cros-ec.o
+--- /dev/null
++++ b/drivers/gpio/gpio-cloverview.c
+@@ -0,0 +1,334 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Intel Cloverview (Atom Z2760, Clover Trail) GPIO controllers, ACPI INT33B2.
++ *
++ * Two Langwell-style banks of 96 pins each: _UID 1 is the always-on (AON)
++ * controller, _UID 2 the core-well one.  Register layout (three 32-bit
++ * registers per function, one bit per pin) taken from the Clover Trail+
++ * Android gpio-langwell driver and checked against the hardware:
++ *
++ *   GPLR 0x00 level      GRER 0x30 rising edge   GAFR 0x54 alt function
++ *   GPDR 0x0c direction  GFER 0x3c falling edge  GFBR 0x6c glitch bypass
++ *   GPSR 0x18 set        GEDR 0x48 edge status   GPIT 0x78 irq type
++ *   GPCR 0x24 clear
++ *
++ * Only the AON bank can do level interrupts: GPIT=1 selects level, and then
++ * GFER becomes the polarity (1 = active low) and GRER the interrupt enable.
++ * The pin mux (GAFR) belongs to firmware and is never touched here.
++ */
++#include <linux/acpi.h>
++#include <linux/bitops.h>
++#include <linux/gpio/driver.h>
++#include <linux/interrupt.h>
++#include <linux/io.h>
++#include <linux/irq.h>
++#include <linux/mod_devicetable.h>
++#include <linux/module.h>
++#include <linux/platform_device.h>
++#include <linux/seq_file.h>
++#include <linux/spinlock.h>
++
++#define CLV_NGPIO	96
++#define CLV_NREG	(CLV_NGPIO / 32)
++
++enum clv_reg {
++	GPLR = 0, GPDR, GPSR, GPCR, GRER, GFER, GEDR, GAFR,
++	GFBR = 9, GPIT,
++};
++
++struct clv_gpio {
++	struct gpio_chip chip;
++	void __iomem *base;
++	raw_spinlock_t lock;
++	bool level_capable;
++	/* requested trigger per pin, so mask/unmask can restore it */
++	unsigned int type[CLV_NGPIO];
++	DECLARE_BITMAP(enabled, CLV_NGPIO);
++};
++
++static void __iomem *clv_reg(struct clv_gpio *cg, unsigned int pin,
++			     enum clv_reg reg)
++{
++	return cg->base + reg * CLV_NREG * 4 + (pin / 32) * 4;
++}
++
++static void clv_update(struct clv_gpio *cg, unsigned int pin,
++		       enum clv_reg reg, bool set)
++{
++	void __iomem *r = clv_reg(cg, pin, reg);
++	u32 v = readl(r);
++
++	if (set)
++		v |= BIT(pin % 32);
++	else
++		v &= ~BIT(pin % 32);
++	writel(v, r);
++}
++
++/* --- gpio_chip --- */
++
++static int clv_get(struct gpio_chip *gc, unsigned int pin)
++{
++	struct clv_gpio *cg = gpiochip_get_data(gc);
++
++	return !!(readl(clv_reg(cg, pin, GPLR)) & BIT(pin % 32));
++}
++
++static void clv_set(struct gpio_chip *gc, unsigned int pin, int value)
++{
++	struct clv_gpio *cg = gpiochip_get_data(gc);
++
++	/* GPSR/GPCR are write-one-to-act, no read-modify-write needed */
++	writel(BIT(pin % 32), clv_reg(cg, pin, value ? GPSR : GPCR));
++}
++
++static int clv_get_direction(struct gpio_chip *gc, unsigned int pin)
++{
++	struct clv_gpio *cg = gpiochip_get_data(gc);
++
++	if (readl(clv_reg(cg, pin, GPDR)) & BIT(pin % 32))
++		return GPIO_LINE_DIRECTION_OUT;
++	return GPIO_LINE_DIRECTION_IN;
++}
++
++static int clv_direction_input(struct gpio_chip *gc, unsigned int pin)
++{
++	struct clv_gpio *cg = gpiochip_get_data(gc);
++	unsigned long flags;
++
++	raw_spin_lock_irqsave(&cg->lock, flags);
++	clv_update(cg, pin, GPDR, false);
++	raw_spin_unlock_irqrestore(&cg->lock, flags);
++	return 0;
++}
++
++static int clv_direction_output(struct gpio_chip *gc, unsigned int pin,
++				int value)
++{
++	struct clv_gpio *cg = gpiochip_get_data(gc);
++	unsigned long flags;
++
++	/* latch the value first so the pin never glitches */
++	clv_set(gc, pin, value);
++	raw_spin_lock_irqsave(&cg->lock, flags);
++	clv_update(cg, pin, GPDR, true);
++	raw_spin_unlock_irqrestore(&cg->lock, flags);
++	return 0;
++}
++
++/* --- irq_chip --- */
++
++/* Program the trigger registers for @pin; caller holds cg->lock. */
++static void clv_program(struct clv_gpio *cg, unsigned int pin, bool on)
++{
++	unsigned int type = cg->type[pin];
++
++	if (type & IRQ_TYPE_LEVEL_MASK) {
++		clv_update(cg, pin, GPIT, true);
++		clv_update(cg, pin, GFER, type & IRQ_TYPE_LEVEL_LOW);
++		clv_update(cg, pin, GRER, on);	/* level enable */
++		return;
++	}
++
++	if (cg->level_capable)
++		clv_update(cg, pin, GPIT, false);
++	clv_update(cg, pin, GRER, on && (type & IRQ_TYPE_EDGE_RISING));
++	clv_update(cg, pin, GFER, on && (type & IRQ_TYPE_EDGE_FALLING));
++}
++
++static void clv_irq_ack(struct irq_data *d)
++{
++	struct clv_gpio *cg = gpiochip_get_data(irq_data_get_irq_chip_data(d));
++	irq_hw_number_t pin = irqd_to_hwirq(d);
++
++	writel(BIT(pin % 32), clv_reg(cg, pin, GEDR));
++}
++
++static void clv_irq_mask(struct irq_data *d)
++{
++	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
++	struct clv_gpio *cg = gpiochip_get_data(gc);
++	irq_hw_number_t pin = irqd_to_hwirq(d);
++	unsigned long flags;
++
++	raw_spin_lock_irqsave(&cg->lock, flags);
++	clear_bit(pin, cg->enabled);
++	clv_program(cg, pin, false);
++	raw_spin_unlock_irqrestore(&cg->lock, flags);
++	gpiochip_disable_irq(gc, pin);
++}
++
++static void clv_irq_unmask(struct irq_data *d)
++{
++	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
++	struct clv_gpio *cg = gpiochip_get_data(gc);
++	irq_hw_number_t pin = irqd_to_hwirq(d);
++	unsigned long flags;
++
++	gpiochip_enable_irq(gc, pin);
++	raw_spin_lock_irqsave(&cg->lock, flags);
++	set_bit(pin, cg->enabled);
++	clv_program(cg, pin, true);
++	raw_spin_unlock_irqrestore(&cg->lock, flags);
++}
++
++static int clv_irq_set_type(struct irq_data *d, unsigned int type)
++{
++	struct clv_gpio *cg = gpiochip_get_data(irq_data_get_irq_chip_data(d));
++	irq_hw_number_t pin = irqd_to_hwirq(d);
++	unsigned long flags;
++
++	if ((type & IRQ_TYPE_LEVEL_MASK) && !cg->level_capable)
++		return -EINVAL;
++
++	raw_spin_lock_irqsave(&cg->lock, flags);
++	cg->type[pin] = type;
++	/* an input is needed to sample the line */
++	clv_update(cg, pin, GPDR, false);
++	clv_program(cg, pin, test_bit(pin, cg->enabled));
++	raw_spin_unlock_irqrestore(&cg->lock, flags);
++
++	if (type & IRQ_TYPE_LEVEL_MASK)
++		irq_set_handler_locked(d, handle_level_irq);
++	else
++		irq_set_handler_locked(d, handle_edge_irq);
++	return 0;
++}
++
++static void clv_irq_print_chip(struct irq_data *d, struct seq_file *p)
++{
++	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
++
++	seq_puts(p, dev_name(gc->parent));
++}
++
++static const struct irq_chip clv_irqchip = {
++	.irq_ack	= clv_irq_ack,
++	.irq_mask	= clv_irq_mask,
++	.irq_unmask	= clv_irq_unmask,
++	.irq_set_type	= clv_irq_set_type,
++	.irq_print_chip	= clv_irq_print_chip,
++	.flags		= IRQCHIP_IMMUTABLE | IRQCHIP_SKIP_SET_WAKE,
++	GPIOCHIP_IRQ_RESOURCE_HELPERS,
++};
++
++static irqreturn_t clv_gpio_irq(int irq, void *data)
++{
++	struct clv_gpio *cg = data;
++	unsigned int bank, handled = 0;
++
++	for (bank = 0; bank < CLV_NREG; bank++) {
++		unsigned long pending, pin;
++
++		pending = readl(clv_reg(cg, bank * 32, GEDR));
++		pending &= bitmap_read(cg->enabled, bank * 32, 32);
++		for_each_set_bit(pin, &pending, 32) {
++			generic_handle_domain_irq(cg->chip.irq.domain,
++						  bank * 32 + pin);
++			handled++;
++		}
++	}
++	return IRQ_RETVAL(handled);
++}
++
++static int clv_irq_init_hw(struct gpio_chip *gc)
++{
++	struct clv_gpio *cg = gpiochip_get_data(gc);
++	unsigned int bank;
++
++	/*
++	 * Firmware leaves all triggers off; make sure of it and drop stale
++	 * status so nothing fires before a consumer asks for it.
++	 */
++	for (bank = 0; bank < CLV_NREG; bank++) {
++		writel(0, clv_reg(cg, bank * 32, GRER));
++		writel(0, clv_reg(cg, bank * 32, GFER));
++		if (cg->level_capable)
++			writel(0, clv_reg(cg, bank * 32, GPIT));
++		writel(~0U, clv_reg(cg, bank * 32, GEDR));
++	}
++	return 0;
++}
++
++static int clv_gpio_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct gpio_irq_chip *girq;
++	struct clv_gpio *cg;
++	const char *uid;
++	int irq, ret;
++
++	cg = devm_kzalloc(dev, sizeof(*cg), GFP_KERNEL);
++	if (!cg)
++		return -ENOMEM;
++
++	cg->base = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(cg->base))
++		return PTR_ERR(cg->base);
++
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++
++	uid = acpi_device_uid(ACPI_COMPANION(dev));
++	cg->level_capable = uid && !strcmp(uid, "1");	/* AON bank */
++	raw_spin_lock_init(&cg->lock);
++
++	cg->chip.label = dev_name(dev);
++	cg->chip.parent = dev;
++	cg->chip.owner = THIS_MODULE;
++	cg->chip.base = -1;
++	cg->chip.ngpio = CLV_NGPIO;
++	cg->chip.get = clv_get;
++	cg->chip.set = clv_set;
++	cg->chip.get_direction = clv_get_direction;
++	cg->chip.direction_input = clv_direction_input;
++	cg->chip.direction_output = clv_direction_output;
++
++	girq = &cg->chip.irq;
++	gpio_irq_chip_set_chip(girq, &clv_irqchip);
++	girq->init_hw = clv_irq_init_hw;
++	girq->parent_handler = NULL;	/* we request the (shared) parent ourselves */
++	girq->num_parents = 0;
++	girq->default_type = IRQ_TYPE_NONE;
++	girq->handler = handle_bad_irq;
++
++	ret = devm_gpiochip_add_data(dev, &cg->chip, cg);
++	if (ret)
++		return dev_err_probe(dev, ret, "failed to add gpiochip\n");
++
++	ret = devm_request_irq(dev, irq, clv_gpio_irq, IRQF_SHARED,
++			       dev_name(dev), cg);
++	if (ret)
++		return dev_err_probe(dev, ret, "failed to request IRQ %d\n", irq);
++
++	dev_info(dev, "%s bank, %u pins, IRQ %d%s\n",
++		 cg->level_capable ? "AON" : "core", CLV_NGPIO, irq,
++		 cg->level_capable ? ", level irqs" : "");
++	return 0;
++}
++
++static const struct acpi_device_id clv_gpio_acpi_ids[] = {
++	{ "INT33B2" },
++	{ }
++};
++MODULE_DEVICE_TABLE(acpi, clv_gpio_acpi_ids);
++
++static struct platform_driver clv_gpio_driver = {
++	.probe = clv_gpio_probe,
++	.driver = {
++		.name = "gpio-cloverview",
++		.acpi_match_table = clv_gpio_acpi_ids,
++		.suppress_bind_attrs = true,
++	},
++};
++
++static int __init clv_gpio_init(void)
++{
++	return platform_driver_register(&clv_gpio_driver);
++}
++/* before i2c/sdhci consumers and before ACPI _AEI users */
++subsys_initcall(clv_gpio_init);
++
++MODULE_DESCRIPTION("Intel Cloverview GPIO (INT33B2)");
++MODULE_LICENSE("GPL");

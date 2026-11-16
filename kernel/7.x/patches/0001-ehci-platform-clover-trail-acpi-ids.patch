@@ -1,0 +1,11 @@
+--- a/drivers/usb/host/ehci-platform.c
++++ b/drivers/usb/host/ehci-platform.c
+@@ -520,6 +520,8 @@
+ #ifdef CONFIG_ACPI
+ static const struct acpi_device_id ehci_acpi_match[] = {
+ 	{ "PNP0D20", 0 }, /* EHCI controller without debug */
++	{ "INT33B6", 0 }, /* Intel Clover Trail EHCI (OTG0), _CID "ACPI\\PNP0D20" malformado */
++	{ "INT33B9", 0 }, /* Intel Clover Trail EHCI (SPH0) */
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(acpi, ehci_acpi_match);

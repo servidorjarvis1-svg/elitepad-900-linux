@@ -1,0 +1,3 @@
+# ElitePad: kernel sin user namespaces -> sandbox setuid y sin sandbox del proceso GPU;
+# la SGX545 solo da GLES 2.0 (ANGLE pide 3.0): todo por software.
+export CHROMIUM_FLAGS="$CHROMIUM_FLAGS --disable-gpu-sandbox --disable-gpu --password-store=basic"

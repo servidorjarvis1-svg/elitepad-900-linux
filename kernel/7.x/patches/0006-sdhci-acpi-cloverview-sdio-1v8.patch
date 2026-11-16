@@ -1,0 +1,60 @@
+--- a/drivers/mmc/host/sdhci-acpi.c
++++ b/drivers/mmc/host/sdhci-acpi.c
+@@ -18,6 +18,7 @@
+ #include <linux/compiler.h>
+ #include <linux/stddef.h>
+ #include <linux/bitops.h>
++#include <linux/log2.h>
+ #include <linux/types.h>
+ #include <linux/err.h>
+ #include <linux/interrupt.h>
+@@ -227,6 +228,30 @@
+ 	.set_uhs_signaling = sdhci_set_uhs_signaling,
+ };
+ 
++/*
++ * Clover Trail (Atom Z2760) SDIO slot: the host only advertises 1.8V, the
++ * on-board SDIO chip (AR6004) answers CMD5 with an OCR in the 3.3V window
++ * while being fed from a fixed rail.  Advertise 3.3V to the card but always
++ * program 1.8V in the host (SDHCI_QUIRK2_ADVERTISE_3V0_FORCE_1V8 in the
++ * Clover Trail+ Android kernel).
++ */
++static void sdhci_acpi_clv_sdio_set_power(struct sdhci_host *host,
++					  unsigned char mode,
++					  unsigned short vdd)
++{
++	if (mode != MMC_POWER_OFF)
++		vdd = ilog2(MMC_VDD_165_195);
++	sdhci_set_power(host, mode, vdd);
++}
++
++static const struct sdhci_ops sdhci_acpi_ops_clv_sdio = {
++	.set_clock = sdhci_set_clock,
++	.set_bus_width = sdhci_set_bus_width,
++	.reset = sdhci_reset,
++	.set_uhs_signaling = sdhci_set_uhs_signaling,
++	.set_power = sdhci_acpi_clv_sdio_set_power,
++};
++
+ static const struct sdhci_ops sdhci_acpi_ops_int = {
+ 	.set_clock = sdhci_set_clock,
+ 	.set_bus_width = sdhci_set_bus_width,
+@@ -322,6 +347,18 @@
+ 	if (acpi_dev_hid_uid_match(adev, "80865ACA", NULL))
+ 		host->mmc_host_ops.get_cd = bxt_get_cd;
+ 
++	if (acpi_dev_hid_uid_match(adev, "INT33BB", "2")) {
++		u32 caps = sdhci_readl(host, SDHCI_CAPABILITIES);
++
++		if ((caps & SDHCI_CAN_VDD_180) &&
++		    !(caps & (SDHCI_CAN_VDD_300 | SDHCI_CAN_VDD_330))) {
++			host->ocr_mask = MMC_VDD_165_195 | MMC_VDD_32_33 |
++					 MMC_VDD_33_34;
++			host->ops = &sdhci_acpi_ops_clv_sdio;
++			dev_info(&pdev->dev, "1.8V-only SDIO host: advertising 3.3V, powering at 1.8V\n");
++		}
++	}
++
+ 	intel_dsm_init(intel_host, &pdev->dev, host->mmc);
+ 
+ 	host->mmc_host_ops.start_signal_voltage_switch =

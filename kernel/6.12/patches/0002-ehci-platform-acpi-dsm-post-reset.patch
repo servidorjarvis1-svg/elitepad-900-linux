@@ -1,0 +1,47 @@
+--- a/b/drivers/usb/host/ehci-platform.c	2026-11-13 14:01:44.120000000 +0100
++++ b/drivers/usb/host/ehci-platform.c	2026-11-13 14:01:44.140000000 +0100
+@@ -53,6 +53,35 @@
+ 	struct delayed_work poll_work;
+ };
+ 
++#ifdef CONFIG_ACPI
++/*
++ * Microsoft "USB Controller" _DSM (UUID ce2ee385-00e6-48cb-9f05-2edb927c4899).
++ * Function 1 = post-reset processing for dual-role controllers: Windows calls it
++ * after every controller reset so the firmware can put the controller in host
++ * mode. Intel Clover Trail (INT33B6, ChipIdea-style OTG) needs it: it writes
++ * USBMODE=0x23 (host mode + VBUS) and tunes the PHY. Without it the dock port
++ * on HP ElitePad 900 G1 stays unpowered and empty.
++ */
++static const guid_t ehci_acpi_usb_dsm_guid =
++	GUID_INIT(0xce2ee385, 0x00e6, 0x48cb,
++		  0x9f, 0x05, 0x2e, 0xdb, 0x92, 0x7c, 0x48, 0x99);
++
++static void ehci_platform_acpi_post_reset(struct device *dev)
++{
++	acpi_handle handle = ACPI_HANDLE(dev);
++	union acpi_object *obj;
++
++	if (!handle || !acpi_check_dsm(handle, &ehci_acpi_usb_dsm_guid, 0, BIT(1)))
++		return;
++
++	obj = acpi_evaluate_dsm(handle, &ehci_acpi_usb_dsm_guid, 0, 1, NULL);
++	ACPI_FREE(obj);
++	dev_info(dev, "ACPI _DSM post-reset processing (host mode) applied\n");
++}
++#else
++static inline void ehci_platform_acpi_post_reset(struct device *dev) { }
++#endif
++
+ static int ehci_platform_reset(struct usb_hcd *hcd)
+ {
+ 	struct platform_device *pdev = to_platform_device(hcd->self.controller);
+@@ -73,6 +102,8 @@
+ 	if (retval)
+ 		return retval;
+ 
++	ehci_platform_acpi_post_reset(hcd->self.controller);
++
+ 	if (pdata->no_io_watchdog)
+ 		ehci->need_io_watchdog = 0;
+ 

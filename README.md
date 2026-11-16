@@ -1,0 +1,80 @@
+# Linux on the HP ElitePad 900 G1 (Intel Atom Z2760 "Clover Trail")
+
+Intel never shipped Linux support for Clover Trail (2012). This repository
+collects what it took to run a **current** Linux on the HP ElitePad 900 G1 in
+2026: kernel patches, kernel configs, the boot chain, a Debian 13 i386 root
+filesystem, and the GPU stack for the PowerVR SGX545.
+
+Everything here was tested on real hardware. Lab notes are in Spanish (`docs/`,
+`research/`); scripts carry Spanish comments.
+
+## Hardware status
+
+| Part | Status | How |
+|---|---|---|
+| Boot (32-bit UEFI, no USB boot) | ✅ | Wubi's GRUB on the Windows partition → own kernel + initramfs (`boot/`) |
+| Kernel | ✅ Linux 7.3.4 i386 | `kernel/7.x/` (6.12 patches kept in `kernel/6.12/`) |
+| Root filesystem | ✅ Debian 13 (trixie) i386 | ext4 image inside `C:\ubuntu\disks\root.disk`, loop-mounted by the initramfs (`rootfs/`) |
+| USB on the dock (EHCI, Ethernet, keyboard) | ✅ | patches 0001-0002 (ACPI IDs + `_DSM` post-reset to host mode) |
+| GPIO `INT33B2`, I2C `INT33B1` | ✅ | patches 0004-0005 |
+| Touchscreen (Atmel `ATML1000`, i2c-hid) | ✅ | |
+| WiFi (Atheros AR6004, SDIO) | ✅ | patch 0006 (SDIO 1.8 V) + `firmware-atheros` |
+| eMMC 8-bit bus | ✅ 1.4-1.9× faster | patch 0007, `sdhci_acpi.ctv_emmc=1` |
+| Reboot | ✅ | patch 0003 (cold reset through the SCU IPC mailbox) |
+| GPU PowerVR SGX545 (`8086:08cf`) | ✅ GLES 2.0 | [powervr_sgx fork, branch `clovertrail`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/clovertrail) + Mesa `sgx` i386 |
+| Desktop | ✅ Xfce on X11, glamor on the SGX545 | `rootfs/desktop/` |
+| Accelerated browser | ✅ WebKitGTK 4.1 / GTK 3 (luakit, surf) | Chromium needs GLES 3.0 → software only |
+| Audio (Realtek RT5640 + Intel SST DSP) | ❌ in progress | codec answers on I2C-5 `0x1c`; DSP RAM not powered yet (`docs/audio-sst-cloverview.md`) |
+| Cameras (OV8830 / OV2720 via ISP2300) | ❌ | ISP firmware `shisp_css15.bin` is not in linux-firmware; mainline `atomisp` only covers ISP2400/2401 |
+| RTC | ❌ | no `/dev/rtc`; time comes from NTP |
+| Suspend / lid / deep C-states | ❌ | needs `idle=poll`; lid handling disabled |
+
+### Measured
+
+- GPU: `kmscube` OK, `glmark2-es2-drm` score 82 (build 87, texture 112, phong 60),
+  Xorg glamor + `glxgears` ~37 FPS, `mpv` YouTube 480p30 over DRM: 1 dropped frame in 45 s, 28 % CPU.
+- Browser (WebKitGTK, 1280×740): CSS animation 57.7 FPS; canvas and WebGL ~7 FPS (still CPU copies).
+- eMMC: 23 MB/s → 32-44 MB/s raw with the 8-bit bus. Boot to desktop ~19 s.
+
+## Layout
+
+```
+kernel/7.x/       patches against 7.3.4, config script and the full .config used
+kernel/6.12/      the original 6.12 patch set
+boot/             GRUB entry, initramfs (busybox + dropbear) init/shutdown, test cycle
+rootfs/           mmdebstrap build + customisation, X11/lightdm/Xfce configs
+gpu/              loader and uAPI test build for powervr_sgx
+tools/sgx-ident/  read-only SGX core identification (freestanding i386)
+research/         audio DMA probes, GPIO inventory, GPU and camera plans
+docs/             lab notes: ACPI/DSDT, audio, boot, performance, desktop
+```
+
+## Building (short version)
+
+1. Kernel: download Linux 7.3.4, apply `kernel/7.x/patches/*`, run
+   `kernel/7.x/config-elitepad-7.x.sh <tree>`, `make ARCH=i386 bzImage modules`.
+2. GPU: build `drm/powervr_sgx` and Mesa (`mesa/build.sh i386-x11`) from the
+   powervr_sgx fork, branch `clovertrail`.
+3. initramfs: `boot/initramfs/build-initramfs.sh` (needs i386 busybox-static and
+   dropbear unpacked from Debian `.deb`s; set `SSH_PUBKEY`).
+4. Root fs: `rootfs/build-rootfs.sh` then `rootfs/customize.sh`, then
+   `mkfs.ext4 -d rootfs root.disk 8G` and copy it to `C:\ubuntu\disks\`.
+5. Boot: add `boot/grub-entry.cfg` to `C:\ubuntu\install\boot\grub\grub.cfg`.
+   The initramfs switches to Debian only when `C:\ubuntu\friday-dev\boot-debian`
+   exists (one-shot marker), otherwise it stays in the busybox + SSH environment.
+
+Paths in the scripts assume `$HOME/elitepad-dev` and `$HOME/src/powervr_sgx`.
+
+## Not included
+
+Windows drivers, firmware blobs from Windows (`realtek_fw_sst.bin`, ISP firmware)
+and ACPI table dumps are not redistributed. Extract them from your own device.
+
+## Credits
+
+- GPU driver, microkernel and Mesa driver: [The1TrueJoe/powervr_sgx](https://github.com/The1TrueJoe/powervr_sgx).
+- Clover Trail+ Android kernels (e.g. Lenovo K900 `redhookbay`) as reference for GPIO, I2C, SDIO and SST.
+
+## License
+
+Scripts and docs: MIT (`LICENSE`). Kernel patches: GPL-2.0, like the Linux kernel.

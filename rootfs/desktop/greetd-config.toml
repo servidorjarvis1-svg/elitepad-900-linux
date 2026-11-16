@@ -1,0 +1,10 @@
+[terminal]
+vt = 7
+
+[default_session]
+command = "agreety --cmd /usr/local/bin/elitepad-session"
+user = "_greetd"
+
+[initial_session]
+command = "/usr/local/bin/elitepad-session"
+user = "user"

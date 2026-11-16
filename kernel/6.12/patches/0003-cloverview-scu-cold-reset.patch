@@ -1,0 +1,133 @@
+--- a/arch/x86/kernel/reboot.c
++++ b/arch/x86/kernel/reboot.c
+@@ -650,6 +650,13 @@
+ 		reboot_type = BOOT_EFI;
+ 	}
+ 
++	/*
++	 * Platform restart handlers (e.g. firmware mailboxes on HW-reduced
++	 * ACPI SoCs without a reset register) get the first chance; if none
++	 * resets the machine we fall through to the legacy methods.
++	 */
++	do_kernel_restart(NULL);
++
+ 	for (;;) {
+ 		/* Could also try the reset bit in the Hammer NB */
+ 		switch (reboot_type) {
+--- a/drivers/platform/x86/Kconfig
++++ b/drivers/platform/x86/Kconfig
+@@ -1098,6 +1098,15 @@
+ 	  functionality.  If in doubt, say Y here; it will only load on
+ 	  supported platforms.
+ 
++config CLOVERVIEW_SCU_RESET
++	bool "Intel Cloverview (Clover Trail) SCU cold reset"
++	depends on ACPI && X86
++	help
++	  Reboot Clover Trail (Atom Z2760) tablets by sending IPCMSG_COLD_RESET
++	  to the SCU mailbox described in ACPI as INT33B5. These machines have
++	  no ACPI reset register, no 8042 and no usable EFI runtime services,
++	  so the default x86 reboot chain hangs.
++
+ config INTEL_SCU_IPC
+ 	bool
+ 
+--- a/drivers/platform/x86/Makefile
++++ b/drivers/platform/x86/Makefile
+@@ -137,6 +137,7 @@
+ 
+ # Intel PMIC / PMC / P-Unit devices
+ obj-$(CONFIG_INTEL_SCU_IPC)		+= intel_scu_ipc.o
++obj-$(CONFIG_CLOVERVIEW_SCU_RESET)	+= cloverview_scu_reset.o
+ obj-$(CONFIG_INTEL_SCU_PCI)		+= intel_scu_pcidrv.o
+ obj-$(CONFIG_INTEL_SCU_PLATFORM)	+= intel_scu_pltdrv.o
+ obj-$(CONFIG_INTEL_SCU_WDT)		+= intel_scu_wdt.o
+--- /dev/null
++++ b/drivers/platform/x86/cloverview_scu_reset.c
+@@ -0,0 +1,86 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Cloverview (Atom Z2760, Clover Trail) reboot through the SCU IPC mailbox.
++ *
++ * Clover Trail tablets ship a HW-reduced ACPI FADT without a reset register,
++ * have no 8042 and no usable EFI runtime services on IA32 firmware, so the
++ * stock x86 reboot chain ends in machine_real_restart() and hangs.  The SCU
++ * (described in ACPI as INT33B5, "Cloverview Inter-Processor (x86/SCU)
++ * Communication controller") resets the platform when it receives
++ * IPCMSG_COLD_RESET, exactly as on Medfield (see intel-mid.c).
++ *
++ * Register layout taken from the firmware's own IPCC method (DSDT):
++ *   +0x00 CMDR (command), +0x04 STSR (bit0 busy, bit1 error).
++ */
++#include <linux/acpi.h>
++#include <linux/delay.h>
++#include <linux/io.h>
++#include <linux/mod_devicetable.h>
++#include <linux/module.h>
++#include <linux/notifier.h>
++#include <linux/platform_device.h>
++#include <linux/reboot.h>
++
++#define CLV_IPC_CMD		0x00
++#define CLV_IPC_STATUS		0x04
++#define CLV_IPC_STATUS_BUSY	BIT(0)
++#define IPCMSG_COLD_RESET	0xF1
++
++static int clv_scu_restart(struct sys_off_data *data)
++{
++	void __iomem *base = data->cb_data;
++	int i;
++
++	/* The mailbox is shared with firmware AML; wait for it to go idle. */
++	for (i = 0; i < 1000; i++) {
++		if (!(readl(base + CLV_IPC_STATUS) & CLV_IPC_STATUS_BUSY))
++			break;
++		udelay(100);
++	}
++
++	pr_emerg("cloverview-scu-reset: requesting cold reset from SCU\n");
++	writel(IPCMSG_COLD_RESET, base + CLV_IPC_CMD);
++	mdelay(1000);
++
++	pr_emerg("cloverview-scu-reset: SCU did not reset the platform\n");
++	return NOTIFY_DONE;
++}
++
++static int clv_scu_reset_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	void __iomem *base;
++	int ret;
++
++	base = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(base))
++		return PTR_ERR(base);
++
++	ret = devm_register_sys_off_handler(dev, SYS_OFF_MODE_RESTART,
++					    SYS_OFF_PRIO_FIRMWARE,
++					    clv_scu_restart, (void __force *)base);
++	if (ret)
++		return dev_err_probe(dev, ret, "cannot register restart handler\n");
++
++	dev_info(dev, "SCU cold reset registered as restart handler\n");
++	return 0;
++}
++
++static const struct acpi_device_id clv_scu_reset_acpi_ids[] = {
++	{ "INT33B5" },
++	{ }
++};
++MODULE_DEVICE_TABLE(acpi, clv_scu_reset_acpi_ids);
++
++static struct platform_driver clv_scu_reset_driver = {
++	.probe = clv_scu_reset_probe,
++	.driver = {
++		.name = "cloverview-scu-reset",
++		.acpi_match_table = clv_scu_reset_acpi_ids,
++		.suppress_bind_attrs = true,
++	},
++};
++builtin_platform_driver(clv_scu_reset_driver);
++
++MODULE_DESCRIPTION("Cloverview SCU IPC cold reset");
++MODULE_LICENSE("GPL");

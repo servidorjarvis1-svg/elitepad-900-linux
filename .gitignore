@@ -1,0 +1,6 @@
+*.bin
+*.img
+*.disk
+*.ko
+bzImage*
+logs/

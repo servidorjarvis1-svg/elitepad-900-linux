@@ -1,0 +1,51 @@
+--- a/drivers/mmc/host/sdhci-acpi.c	2026-11-16 14:41:46.184000000 +0100
++++ b/drivers/mmc/host/sdhci-acpi.c	2026-11-16 14:41:58.492000000 +0100
+@@ -405,6 +405,40 @@
+ 	.priv_size	= sizeof(struct intel_host),
+ };
+ 
++/*
++ * Clover Trail eMMC (INT33BA, e.g. HP ElitePad 900 G1).  It binds through its
++ * PNP0D40 _CID with no slot, so the host gets a 4-bit bus only, although the
++ * controller's capabilities advertise an 8-bit embedded bus and DDR50 and the
++ * eMMC (4.41) does DDR52.  Off by default; ctv_emmc turns each on:
++ *   bit 0  8-bit bus (the core's bus test falls back to 4 bits)
++ *   bit 1  DDR52 at the current 3.3 V signalling (no voltage switch)
++ *   bit 2  non-removable
++ */
++static unsigned int ctv_emmc;
++module_param(ctv_emmc, uint, 0444);
++MODULE_PARM_DESC(ctv_emmc, "Clover Trail eMMC (INT33BA): bit0 8-bit, bit1 DDR52 3.3V, bit2 non-removable (default 0)");
++
++static int ctv_emmc_probe_slot(struct platform_device *pdev,
++			       struct acpi_device *adev)
++{
++	struct sdhci_acpi_host *c = platform_get_drvdata(pdev);
++	struct mmc_host *mmc = c->host->mmc;
++
++	if (ctv_emmc & BIT(0))
++		mmc->caps |= MMC_CAP_8_BIT_DATA;
++	if (ctv_emmc & BIT(1))
++		mmc->caps |= MMC_CAP_3_3V_DDR;
++	if (ctv_emmc & BIT(2))
++		mmc->caps |= MMC_CAP_NONREMOVABLE;
++	if (ctv_emmc)
++		dev_info(&pdev->dev, "Clover Trail eMMC: ctv_emmc=%#x\n", ctv_emmc);
++	return 0;
++}
++
++static const struct sdhci_acpi_slot sdhci_acpi_slot_ctv_emmc = {
++	.probe_slot	= ctv_emmc_probe_slot,
++};
++
+ static const struct sdhci_acpi_slot sdhci_acpi_slot_int_sdio = {
+ 	.quirks  = SDHCI_QUIRK_BROKEN_CARD_DETECTION |
+ 		   SDHCI_QUIRK_NO_LED |
+@@ -728,6 +762,7 @@
+ 	{ "80860F16" , NULL, &sdhci_acpi_slot_int_sd   },
+ 	{ "INT33BB"  , "2" , &sdhci_acpi_slot_int_sdio },
+ 	{ "INT33BB"  , "3" , &sdhci_acpi_slot_int_sd },
++	{ "INT33BA"  , NULL, &sdhci_acpi_slot_ctv_emmc },
+ 	{ "INT33C6"  , NULL, &sdhci_acpi_slot_int_sdio },
+ 	{ "INT3436"  , NULL, &sdhci_acpi_slot_int_sdio },
+ 	{ "INT344D"  , NULL, &sdhci_acpi_slot_int_sdio },

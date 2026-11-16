@@ -1,0 +1,11 @@
+#!/bin/sh
+# Sesión de escritorio de la ElitePad: labwc (Wayland, GPU por Mesa sgx) + LXQt
+export GBM_BACKENDS_PATH=/opt/sgx/lib/gbm
+export XDG_SESSION_TYPE=wayland
+export XDG_CURRENT_DESKTOP=LXQt:wlroots
+export QT_QPA_PLATFORM=wayland
+export MOZ_ENABLE_WAYLAND=1
+export XKB_DEFAULT_LAYOUT=es
+export WLR_NO_HARDWARE_CURSORS=1
+mkdir -p "$HOME/.local/state"
+exec labwc > "$HOME/.local/state/labwc.log" 2>&1

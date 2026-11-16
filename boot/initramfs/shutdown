@@ -1,0 +1,34 @@
+#!/bin/sh
+# /run/initramfs/shutdown: systemd-shutdown hace pivot_root aqui con el Debian en /oldroot
+# y lo ejecuta con reboot|poweroff|halt. Desmonta root.disk (loop) y despues el NTFS de Windows.
+# Cada paso se escribe en pantalla: si se cuelga, el ultimo mensaje visible dice donde.
+/bin/busybox --install -s /bin
+export PATH=/bin
+mount -t proc proc /proc 2>/dev/null
+mount -t devtmpfs dev /dev 2>/dev/null
+echo 8 > /proc/sys/kernel/printk
+paso() { echo "[FRIDAY apagado] $*" > /dev/kmsg; echo "[FRIDAY apagado] $*" > /dev/console 2>/dev/null; }
+paso "1/6 inicio ($1)"
+sync
+# sacar el NTFS de debajo del Debian para poder soltar primero el loop
+mount -o rprivate / 2>/dev/null
+mount -o move /oldroot/host /host 2>/dev/null && MOVED=1
+paso "2/6 C: movido=${MOVED:-no}"
+umount -l /oldroot 2>/dev/null
+for l in /dev/loop[0-9]*; do losetup -d "$l" 2>/dev/null; done
+sync; sleep 1
+paso "3/6 root.disk soltado"
+if [ -n "$MOVED" ]; then
+  umount /host 2>/dev/null || { mount -o remount,ro /host 2>/dev/null; umount -l /host; }
+fi
+sync; sleep 1
+paso "4/6 C: desmontado: $(grep -c ' /host ' /proc/mounts) montajes restantes"
+paso "5/6 llamando a $1 -f"
+case "$1" in
+  poweroff) poweroff -f ;;
+  halt) halt -f ;;
+  *) reboot -f ;;
+esac
+paso "6/6 ERROR: $1 -f ha vuelto"
+sleep 30
+echo b > /proc/sysrq-trigger
