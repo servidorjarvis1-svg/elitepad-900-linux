@@ -1,0 +1,188 @@
+# GLES 3.0 work on the SGX545 (Clover Trail): sRGB render targets, the ES 3.0 formats, 2D texture arrays
+# 2026-11-17, HP ElitePad 900 G1, kernel 7.3.4-elitepad #8, Debian 13 i386, Mesa 26.2.5 + powervr_sgx
+# Branch: https://github.com/servidorjarvis1-svg/powervr_sgx/tree/wip/es3-formats-arrays (on dev 547e4e6, local, not a PR yet)
+#
+#   8e92852 mesa/sgx: sRGB render targets
+#   f1c0e3f mesa/sgx: build the sRGB filter's tap coordinates before the taps   (bug on dev)
+#   eb901df mesa/sgx: the formats ES 3.0 asks short of arrays and transform feedback
+#   6d32621 sgx/compiler: a texelFetch of an array's coordinate, a component at a time   (bug on dev)
+#   9f603eb mesa/sgx: 2D texture arrays
+#
+# Everything new is under SGX_DEBUG=glsl130; the default path is unchanged.
+
+## What compute_version_es2 still lacks (glxinfo on the tablet, SGX_DEBUG=glsl130,ubo)
+
+at 8e92852 (sRGB render targets only; EXT_sRGB already there):
+                         ARB_shader_texture_lod, OES_texture_float, OES_texture_half_float,
+                         OES_texture_half_float_linear, ARB_depth_buffer_float,
+                         EXT_packed_float, EXT_texture_shared_exponent, EXT_texture_snorm,
+                         EXT_texture_type_2_10_10_10_REV, EXT_texture_array, EXT_transform_feedback
+after (this branch):     EXT_transform_feedback
+
+## Probes (MESA_GLES_VERSION_OVERRIDE=3.0 SGX_DEBUG=glsl130, final stack)
+
+=== sgx_srgb
+OpenGL ES 3.0 Mesa 26.2.5
+SRGB8_ALPHA8 FBO: status 0x8cd5, encoding 0x8c40: OK
+1 clear (0.5, 0.25, 0, 0.5)                  ( 8, 8) got 188 137   0 128 want 188 137   0 128: OK
+2 opaque draw (0.2, 0.5, 0.8, 1)             (32,32) got 124 188 231 255 want 124 188 231 255: OK
+3 SRC_ALPHA, 1-SRC_ALPHA: 0.25 / 0.75 at 0.5 (32,32) got 188 188 188 191 want 188 188 188 191: OK
+4 ONE, ONE: 0.25 + 0.25                      (32,32) got 188 188 188 255 want 188 188 188 255: OK
+5 CONSTANT_COLOR (0.5, 0.25, 1, 0.5)         (32,32) got 188 137 255 128 want 188 137 255 128: OK
+6a MAX                                       (32,32) got 188 188 137 255 want 188 188 137 255: OK
+6b MIN                                       (32,32) got 137 137   0 255 want 137 137   0 255: OK
+7 REVERSE_SUBTRACT: 0.5 - 0.25               (32,32) got 138 138 138 255 want 137 137 137 255: OK
+8 ONE, ONE with G masked                     (32,32) got 188 137 188 255 want 188 137 188 255: OK
+9a discard + ONE, ONE: kept half             ( 8,32) got 137 137 137 255 want 137 137 137 255: OK
+9b discard + ONE, ONE: drawn half            (56,32) got 188 188 188 255 want 188 188 188 255: OK
+10 sRGB texture sampled into RGBA8           (32,32) got 128 128 128 255 want 128 128 128 255: OK
+10b sRGB texture LINEAR halfway, varying coord (32,32) got 131 131 131 255 want 128 128 128 255: OK
+11 RGBA8 target, not encoded                 (32,32) got  51 128 204 255 want  51 128 204 255: OK
+11b RGBA8 target, blended as before          (32,32) got 128 128 128 191 want 128 128 128  -1: OK
+12a MRT: sRGB buffer                         (32,32) got 188 137 124 255 want 188 137 124 255: OK
+12b MRT: RGBA8 buffer                        (32,32) got 128  64  51 255 want 128  64  51 255: OK
+GL error 0x0
+result: 0 failed
+exit=0
+=== sgx_es3fmt
+OpenGL ES 3.0 Mesa 26.2.5
+  GL_EXT_sRGB                              yes
+  GL_OES_texture_float                     yes
+  GL_OES_texture_half_float                yes
+  GL_OES_texture_half_float_linear         yes
+  GL_EXT_texture_type_2_10_10_10_REV       yes
+  GL_OES_depth_texture_cube_map            yes
+1a textureLod level 2                          (32,32) got 120 135   0 255 want 120 135   0 255: OK
+1b textureGrad (4 texels a pixel: level 2)     (32,32) got 120 135   0 255 want 120 135   0 255: OK
+2a DEPTH_COMPONENT32F: depth 0.3 < 0.30001     (32,32) got 255   0   0 255 want 255   0   0 255: OK
+2b DEPTH32F_STENCIL8: depth 0.3 < 0.30001      (32,32) got 255   0   0 255 want 255   0   0 255: OK
+2b DEPTH32F_STENCIL8: stencil 5 drawn          (16,32) got 255 255 255 255 want 255 255 255 255: OK
+2b DEPTH32F_STENCIL8: stencil 0 kept           (48,32) got 255   0   0 255 want 255   0   0 255: OK
+2e DEPTH24_STENCIL8 (control): depth 0.3 < 0.30001 (32,32) got 255   0   0 255 want 255   0   0 255: OK
+2e DEPTH24_STENCIL8 (control): stencil 5 drawn (16,32) got 255 255 255 255 want 255 255 255 255: OK
+2e DEPTH24_STENCIL8 (control): stencil 0 kept  (48,32) got 255   0   0 255 want 255   0   0 255: OK
+3 RGBA32Fa NEAREST texel 0                     ( 8,32) got 175  64 223 135 want 175  64 223 135: OK
+3 RGBA32Fb NEAREST texel 1                     (56,32) got  80 191  32 247 want  80 191  32 247: OK
+3 RGBA32Fc LINEAR halfway                      (32,32) got 126 129 125 193 want 128 128 128 191: OK
+4 RGBA16Fa NEAREST texel 0                     ( 8,32) got 175  64 223 135 want 175  64 223 135: OK
+4 RGBA16Fb NEAREST texel 1                     (56,32) got  80 191  32 247 want  80 191  32 247: OK
+4 RGBA16Fc LINEAR halfway                      (32,32) got 126 129 125 193 want 128 128 128 191: OK
+5a R11F_G11F_B10F sampled                      (32,32) got 175 135 223 159 want 175 135 223 159: OK
+5b R11F_G11F_B10F render target: status 0x8cd5 (informative: ES 3.0 doesn't ask it)
+5c R11F_G11F_B10F rendered and sampled         (32,32) got 207 143 223 159 want 207 143 223 159: OK
+6 RGB9_E5 sampled                              (32,32) got 175 135 223 159 want 175 135 223 159: OK
+7 RGB10_A2 (1023, 512, 0, 3)                   (32,32) got 255 128   0 255 want 255 128   0 255: OK
+8a RGBA8_SNORM texel 0 (1, -1, -1, 0)          ( 8,32) got 255   0   0 128 want 255   0   0 128: OK
+8b RGBA8_SNORM texel 1 (-1, 1, 0, 1)           (56,32) got   0 255 128 255 want   0 255 128 255: OK
+8c RGBA8_SNORM LINEAR halfway (0, 0, -0.5, 0.5) (32,32) got 123 132  65 193 want 128 128  64 191: OK
+8d R8_SNORM -64: (-0.504, 0, 0, 1)             (32,32) got  63 128 128 255 want  63 128 128 255: OK
+9 RGBA32F mipmapped, textureLod level 1: got 128 128 128 159, level 1 is 159 96 128 159 (informative: one level, F32 planes strided)
+GL error 0x0
+result: 0 failed
+exit=0
+=== sgx_texarray
+OpenGL ES 3.0 Mesa 26.2.5
+GL_MAX_ARRAY_TEXTURE_LAYERS 256: OK
+1 layer 0 (uniform), NEAREST                 (32,32) got  20 200   0 255 want  20 200   0 255: OK
+1 layer 1 (uniform), NEAREST                 (32,32) got  57  35  53 255 want  57  35  53 255: OK
+1 layer 2 (uniform), NEAREST                 (32,32) got  94 126 106 255 want  94 126 106 255: OK
+1 layer 3 (uniform), NEAREST                 (32,32) got 131 217 159 255 want 131 217 159 255: OK
+1 z 1.4, LINEAR: layer 1 (no blend)          (32,32) got  57  35  53 255 want  57  35  53 255: OK
+1 z 1.6: layer 2                             (32,32) got  94 126 106 255 want  94 126 106 255: OK
+1 z -3: layer 0 (clamped)                    (32,32) got  20 200   0 255 want  20 200   0 255: OK
+1 z 9: layer 3 (clamped)                     (32,32) got 131 217 159 255 want 131 217 159 255: OK
+2 layer per pixel: column 0                  ( 8,32) got  20 200   0 255 want  20 200   0 255: OK
+2 layer per pixel: column 1                  (24,32) got  57  35  53 255 want  57  35  53 255: OK
+2 layer per pixel: column 2                  (40,32) got  94 126 106 255 want  94 126 106 255: OK
+2 layer per pixel: column 3                  (56,32) got 131 217 159 255 want 131 217 159 255: OK
+3 texelFetch layer 2                         (32,32) got  94 126 106 255 want  94 126 106 255: OK
+4 textureSize (8, 8, 4)                      (32,32) got   8   8   4 255 want   8   8   4 255: OK
+5 mipmapped: layer 2, level 1                (32,32) got 174  46 186 255 want 174  46 186 255: OK
+6a rendered layer 1                          (32,32) got 255   0 255 255 want 255   0 255 255: OK
+6b layer 0 kept                              (32,32) got  20 200   0 255 want  20 200   0 255: OK
+6c layer 2 kept                              (32,32) got  94 126 106 255 want  94 126 106 255: OK
+7 NPOT 6x5: layer 2                          (32,32) got  94 126 106 255 want  94 126 106 255: OK
+8 64 layers: layer 63                        (32,32) got  47  45  11 255 want  47  45  11 255: OK
+8 64 layers: layer 31                        (32,32) got 143 205 107 255 want 143 205 107 255: OK
+9 shadow array: layer 1 (0.5) vs 0.6 / 0.4   (32,32) got   0 255   0 255 want   0 255   0 255: OK
+GL error 0x0
+result: 0 failed
+exit=0
+
+## dev bugs found on the way (both fixed on the branch)
+
+- lower_srgb_filter built each tap's coordinate after inserting the tap: a 2D sRGB texture
+  filtered LINEAR in the shader failed to compile ("unsupported instruction type 1") and the
+  draw was skipped. Probe: an sRGB texture LINEAR halfway between 0 and 255 from a varying.
+    dev:    0 0 0 0   (nothing drawn)
+    fixed:  131 131 131 255   (linear 0.5 = 128, at the pixel's offset)
+- txf_to_txl built an array texelFetch's coordinate as vec2(uv, layer) with uv a vector:
+  invalid NIR, nir_opt_copy_prop crashed in sgx_lower at link time (gdb backtrace on the tablet).
+
+## Known limits
+
+- Float textures are F32 planes, strided, one level: a mipmapped float texture samples its
+  base level (sgx_es3fmt test 9, informative). A twiddled 0x12 with mips is an untested H2 case.
+- Shader LINEAR filtering of F32 / sRGB textures is at one level (as on dev for sRGB).
+- glBlendColor is part of an sRGB blend variant's key: animating it recompiles.
+
+## Compiler unit tests (gtest, i386, on the tablet)
+
+dev: 76/76.  branch: 77/77 (+ fragment_sample_state_in_temporaries).
+
+## Default-path bench (/root/sgx-pr-bench.sh: Mesa bind-mounted over /usr/local/lib/sgx, no override)
+# pr-dev = dev 547e4e6; pr-srgb = 8e92852; pr-tandaa = eb901df; pr-arr = 9f603eb.
+# The first pr-arr run was disturbed by a gtest run on the tablet; this is the clean re-run.
+
+[16:34:31] == pr-dev  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[16:34:50] luakit css: FPS=61.7
+[16:35:13] luakit canvas: FPS=13.3
+[16:35:37] luakit webgl: FPS=13.6 GL=WebKit WebGL
+[16:35:53] glxgears: 60.225 FPS
+[16:36:26] mpv x11 720p30 30s: Dropped: 2
+[16:42:02] glmark2:                                   glmark2 Score: 70   fallos: 2
+[16:42:34] mpv drm 720p30 30s: Dropped: 3
+[16:42:35] uapi: 50/50 passed
+[16:42:35] frame: 100/100 frames right
+[16:42:35] irqs: 313121
+[16:42:35] dmesg powervr: 0
+FIN
+[16:42:58] == pr-srgb  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[16:43:19] luakit css: FPS=61.7
+[16:43:42] luakit canvas: FPS=12.6
+[16:44:06] luakit webgl: FPS=14.3 GL=WebKit WebGL
+[16:44:22] glxgears: 60.200 FPS
+[16:44:55] mpv x11 720p30 30s: Dropped: 4
+[16:50:31] glmark2:                                   glmark2 Score: 70   fallos: 2
+[16:51:03] mpv drm 720p30 30s: Dropped: 2
+[16:51:04] uapi: 50/50 passed
+[16:51:04] frame: 100/100 frames right
+[16:51:04] irqs: 352224
+[16:51:04] dmesg powervr: 0
+FIN
+[17:29:40] == pr-tandaa  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[17:30:00] luakit css: FPS=61.7
+[17:30:23] luakit canvas: FPS=12.4
+[17:30:47] luakit webgl: FPS=14.3 GL=WebKit WebGL
+[17:31:03] glxgears: 63.814 FPS
+[17:31:36] mpv x11 720p30 30s: Dropped: 4
+[17:37:12] glmark2:                                   glmark2 Score: 70   fallos: 2
+[17:37:45] mpv drm 720p30 30s: Dropped: 2
+[17:37:45] uapi: 50/50 passed
+[17:37:45] frame: 100/100 frames right
+[17:37:46] irqs: 392295
+[17:37:46] dmesg powervr: 0
+FIN
+[20:41:20] == pr-arr  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[20:41:40] luakit css: FPS=61.7
+[20:42:03] luakit canvas: FPS=12.9
+[20:42:27] luakit webgl: FPS=13.5 GL=WebKit WebGL
+[20:42:43] glxgears: 59.999 FPS
+[20:43:15] mpv x11 720p30 30s: Dropped: 5
+[20:48:51] glmark2:                                   glmark2 Score: 70   fallos: 2
+[20:49:24] mpv drm 720p30 30s: Dropped: 2
+[20:49:24] uapi: 50/50 passed
+[20:49:24] frame: 100/100 frames right
+[20:49:25] irqs: 472413
+[20:49:25] dmesg powervr: 0
+FIN

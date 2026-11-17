@@ -24,8 +24,15 @@ tocar — y qué **no** hace falta tocar.
   local con render a sRGB (todavía en lineal) y profundidad D32F/D32F_S8.
 - La composición lenta (~1 FPS) no era la GPU sino el vblank falso de `simpledrm`:
   arreglado con el parche de kernel 0010.
-- Falta para que sea usable de verdad: sRGB codificado de verdad, quitar el override
-  (las condiciones de `compute_version_es2`) y dEQP-GLES3.
+- Tarde del 2026-11-17, rama [`wip/es3-formats-arrays`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/wip/es3-formats-arrays)
+  (local, sin PR): sRGB codificado de verdad (blend en lineal en el programa), los
+  formatos de ES 3.0 (texture LOD en fragmento, D32F/D32F_S8, float 32F/16F,
+  11F11F10F, RGB9E5, RGB10A2, snorm) y texturas array 2D. Medido con glxinfo: de las
+  condiciones de `compute_version_es2` **solo falta `EXT_transform_feedback`**
+  (hipótesis H4 de `GL3.md`, sin probar en hardware). Detalle y sondas:
+  `results/es3-srgb-formats-arrays-2026-11-17.txt`.
+- Falta para que sea usable de verdad: transform feedback (para quitar el override),
+  mipmaps en texturas float (hoy planos F32 de un nivel) y dEQP-GLES3.
 
 ## 1. Resumen en cinco frases
 
