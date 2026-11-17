@@ -1,0 +1,56 @@
+[12:53:42] == pr-vtfbase  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[12:54:01] luakit css: FPS=61.8
+[12:54:25] luakit canvas: FPS=12.4
+[12:54:48] luakit webgl: FPS=14.2 GL=WebKit WebGL
+[12:55:05] glxgears: 60.000 FPS
+[12:55:38] mpv x11 720p30 30s: Dropped: 4
+[13:01:14] glmark2:                                   glmark2 Score: 70   fallos: 2
+[13:01:46] mpv drm 720p30 30s: Dropped: 2
+[13:01:47] uapi: 50/50 passed
+[13:01:47] frame: 100/100 frames right
+[13:01:47] irqs: 176654
+[13:01:47] dmesg powervr: 0
+FIN
+[13:02:10] == pr-vtf  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[13:02:30] luakit css: FPS=61.8
+[13:02:53] luakit canvas: FPS=12.8
+[13:03:17] luakit webgl: FPS=14.7 GL=WebKit WebGL
+[13:03:33] glxgears: 62.954 FPS
+[13:04:06] mpv x11 720p30 30s: Dropped: 3
+[13:09:41] glmark2:                                   glmark2 Score: 70   fallos: 2
+[13:10:14] mpv drm 720p30 30s: Dropped: 3
+[13:10:14] uapi: 50/50 passed
+[13:10:15] frame: 100/100 frames right
+[13:10:15] irqs: 215567
+[13:10:15] dmesg powervr: 0
+FIN
+== SGX_DEBUG=
+=======================================================
+=======================================================
+=======================================================
+[terrain] <default>: Unsupported
+[jellyfish] <default>: FPS: 41 FrameTime: 24.486 ms
+[texture] <default>: FPS: 122 FrameTime: 8.215 ms
+=======================================================
+                                  glmark2 Score: 80 
+=======================================================
+== SGX_DEBUG=glsl130
+=======================================================
+=======================================================
+=======================================================
+[terrain] <default>: Unsupported
+[jellyfish] <default>: FPS: 41 FrameTime: 24.472 ms
+[texture] <default>: FPS: 122 FrameTime: 8.246 ms
+=======================================================
+                                  glmark2 Score: 80 
+=======================================================
+== SGX_DEBUG=glsl130,vtf
+=======================================================
+=======================================================
+=======================================================
+[terrain] <default>: FPS: 1 FrameTime: 1401.723 ms
+[jellyfish] <default>: FPS: 42 FrameTime: 24.210 ms
+[texture] <default>: FPS: 122 FrameTime: 8.219 ms
+=======================================================
+                                  glmark2 Score: 54 
+=======================================================

@@ -1,0 +1,68 @@
+#### ES3 override
+OpenGL ES 3.0 Mesa 26.2.5 (ES3)
+0 MAX_VERTEX_TEXTURE_IMAGE_UNITS 16, COMBINED 24: OK
+   quad 0: 255,0,0 (want 255,0,0)
+   quad 1: 0,255,0 (want 0,255,0)
+   quad 2: 0,0,255 (want 0,0,255)
+   quad 3: 255,255,255 (want 255,255,255)
+1 a colour a vertex from a NEAREST texture: OK
+2 the vertex sampler's LINEAR filter: OK (128,128,128, want ~128)
+   quad 0: height 0 px (want 0)
+   quad 1: height 16 px (want 16)
+   quad 2: height 32 px (want 32)
+   quad 3: height 64 px (want 64)
+3 displacement by a height texture (terrain): OK
+4 vertex and fragment units apart: OK
+   quad 0: 255,255,255
+   quad 1: 0,0,255
+   quad 2: 0,255,0
+   quad 3: 255,0,0
+5 texelFetch and textureSize in a vertex shader: OK
+   lod 0: 255,0,0
+   lod 1: 255,0,0
+6 textureLod level 0/1 of a 2x2 texture in a vertex shader (informative): level 0
+   7 fragment 2x2 lod 0: 255,0,0
+   7 fragment 2x2 lod 1: 255,0,0
+   7 vertex 32x32 lod 0: 255,0,0 (want 255,0,0) OK
+   7 vertex 32x32 lod 1: 0,255,0 (want 0,255,0) OK
+   7 vertex 32x32 lod 2: 0,0,255 (want 0,0,255) OK
+   7 vertex 32x32 lod 3: 255,255,0 (want 255,255,0) OK
+   7 fragment 32x32 lod 0: 255,0,0 (want 255,0,0) OK
+   7 fragment 32x32 lod 1: 0,255,0 (want 0,255,0) OK
+   7 fragment 32x32 lod 2: 0,0,255 (want 0,0,255) OK
+   7 fragment 32x32 lod 3: 255,255,0 (want 255,255,0) OK
+   8 fragment, implicit LOD, viewport 64x64: 255,0,0
+   8 fragment, implicit LOD, viewport 32x32: 255,0,0
+   8 fragment, implicit LOD, viewport 16x16: 0,255,0
+   8 fragment, implicit LOD, viewport 8x8: 0,0,255
+   8 fragment, implicit LOD, viewport 4x4: 255,255,0
+   8 fragment, implicit LOD, viewport 2x2: 255,255,0
+   8 fragment, implicit LOD, viewport 1x1: 255,255,0
+glGetError 0x0
+result: 0 failed
+rc=0
+#### sin override (GLES2)
+OpenGL ES 2.0 Mesa 26.2.5 (ES2)
+0 MAX_VERTEX_TEXTURE_IMAGE_UNITS 16, COMBINED 24: OK
+1 a colour a vertex from a NEAREST texture: OK
+2 the vertex sampler's LINEAR filter: OK (128,128,128, want ~128)
+3 displacement by a height texture (terrain): OK
+4 vertex and fragment units apart: OK
+glGetError 0x0
+result: 0 failed
+rc=0
+#### sin vtf
+0 MAX_VERTEX_TEXTURE_IMAGE_UNITS 0, COMBINED 8: FAIL
+result: no vertex texture units
+-rw-r--r-- 1 root root 3392 nov 17 13:02 /tmp/fps.html
+chromium css (gpu): "FPS=13.2"
+chromium canvas (gpu): "FPS=12.3"
+chromium webgl (gpu): "FPS=7.5 GL=WebKit WebGL"
+chromium css (sw): "FPS=8.3"
+chromium webgl (sw): "WEBGL=NO"
+== /tmp/chr-vtf-canvas-gpu.log
+0
+== /tmp/chr-vtf-css-gpu.log
+0
+== /tmp/chr-vtf-webgl-gpu.log
+0

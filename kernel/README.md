@@ -213,3 +213,15 @@ make KDIR=~/elitepad-dev/linux-7.x/linux-7.3.4 ARCH=i386 modules
 Antes de tocar la tableta conviene arrancar este `bzImage` **en RAM** (initramfs actual) y
 comprobar en `dmesg` que siguen saliendo los bindings de INT33B2/B1/BB/B6/B9 y que simpledrm
 toma la pantalla.
+
+## Parches 0007-0010 (7.x)
+
+| Parche | Qué hace |
+|---|---|
+| `0007-mmc-sdhci-acpi-clover-trail-emmc-ctv_emmc.patch` | ranura INT33BA con bus de 8 bits, activable con `sdhci_acpi.ctv_emmc=1` |
+| `0008-x86-cpa-skip-highmem-pages-in-page-arrays.patch` | CPA: no desreferenciar páginas HIGHMEM en arrays de páginas (oops con `powervr_sgx.highmem=1`) |
+| `0009-x86-pat-track-memtype-of-highmem-pages-in-page-arrays.patch` | PAT: reservar el tipo de memoria de las páginas HIGHMEM (WC real para la GPU) |
+| `0010-drm-simpledrm-use-vblank-timer.patch` | `simpledrm` con el temporizador de vblank de DRM: Present deja de ir a ~1 Hz |
+
+`config-7.3.4-elitepad` es el `/proc/config.gz` del kernel que corre en la tableta
+(#8, con `USER_NS`, zram/zsmalloc y los cuatro parches de arriba).

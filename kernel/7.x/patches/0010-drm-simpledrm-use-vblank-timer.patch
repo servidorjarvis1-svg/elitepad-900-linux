@@ -1,0 +1,54 @@
+From: servidorjarvis1-svg <servidorjarvis1-svg@users.noreply.github.com>
+Subject: [PATCH] drm/simpledrm: Use vblank timer
+
+simpledrm has no vblank interrupt, so DRM_IOCTL_WAIT_VBLANK fails and
+Xorg's modesetting driver falls back to a fake vblank of about 1 Hz for
+Present. Every client that syncs to vblank on top of it (glxgears, mpv,
+Chromium with its default GPU vsync) is paced at roughly one frame a
+second.
+
+Use the DRM vblank timer, as bochs and cirrus-qemu do, so vblank events
+come at the rate of the display mode (60 Hz for sysfb modes).
+
+Measured on an HP ElitePad 900 (Clover Trail, simpledrm on the EFI
+framebuffer, Xorg modesetting + glamor): glxgears with vsync went from
+1.4 FPS to 24 FPS; Chromium 150 (ANGLE on GLES) animating CSS from 1.9 to
+13.8 FPS, with the GPU process no longer idling between frames.
+
+Signed-off-by: servidorjarvis1-svg <servidorjarvis1-svg@users.noreply.github.com>
+---
+--- a/drivers/gpu/drm/sysfb/simpledrm.c
++++ b/drivers/gpu/drm/sysfb/simpledrm.c
+@@ -31,6 +31,8 @@
+ #include <drm/drm_of.h>
+ #include <drm/drm_print.h>
+ #include <drm/drm_probe_helper.h>
++#include <drm/drm_vblank.h>
++#include <drm/drm_vblank_helper.h>
+ 
+ #include "drm_sysfb_helper.h"
+ 
+@@ -585,10 +587,12 @@
+ 
+ static const struct drm_crtc_helper_funcs simpledrm_crtc_helper_funcs = {
+ 	DRM_SYSFB_CRTC_HELPER_FUNCS,
++	DRM_CRTC_HELPER_VBLANK_FUNCS,
+ };
+ 
+ static const struct drm_crtc_funcs simpledrm_crtc_funcs = {
+ 	DRM_SYSFB_CRTC_FUNCS,
++	DRM_CRTC_VBLANK_TIMER_FUNCS,
+ 	.destroy = drm_crtc_cleanup,
+ };
+ 
+@@ -876,6 +880,10 @@
+ 	if (ret)
+ 		return ERR_PTR(ret);
+ 
++	ret = drm_vblank_init(dev, 1);
++	if (ret)
++		return ERR_PTR(ret);
++
+ 	drm_mode_config_reset(dev);
+ 
+ 	return sdev;

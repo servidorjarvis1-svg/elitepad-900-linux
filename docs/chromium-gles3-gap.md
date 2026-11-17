@@ -14,6 +14,19 @@ tocar — y qué **no** hace falta tocar.
 
 ---
 
+## 0. Estado (2026-11-17)
+
+- Con `MESA_GLES_VERSION_OVERRIDE=3.0` y `--use-angle=gles`, Chromium 150 **arranca
+  el proceso GPU y pinta en hardware**: WebGL por GPU, CSS 13,2 FPS (software 8,3).
+- Lo que lo hizo posible, en orden: `gl_VertexID` (PR #20), offsets enteros en los
+  uniforms indexados (PR #19), **vertex texture fetch real** (PR #21: los programas
+  de Skia ya no fallan por `MAX_VERTEX_TEXTURE_IMAGE_UNITS(0)`), y un experimento
+  local con render a sRGB (todavía en lineal) y profundidad D32F/D32F_S8.
+- La composición lenta (~1 FPS) no era la GPU sino el vblank falso de `simpledrm`:
+  arreglado con el parche de kernel 0010.
+- Falta para que sea usable de verdad: sRGB codificado de verdad, quitar el override
+  (las condiciones de `compute_version_es2`) y dEQP-GLES3.
+
 ## 1. Resumen en cinco frases
 
 1. Chromium **exige un contexto OpenGL ES ≥ 3.0** para arrancar el proceso GPU:
