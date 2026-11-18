@@ -1,0 +1,115 @@
+# GLES 3.0 on the SGX545 (Clover Trail): test H4 and transform feedback, ES 3.0 without the override
+# 2026-11-18, HP ElitePad 900 G1, kernel 7.3.4-elitepad #8, Debian 13 i386, Mesa 26.2.5 + powervr_sgx
+# Branch: https://github.com/servidorjarvis1-svg/powervr_sgx/tree/wip/es3-xfb (local work, not a PR yet)
+# on wip/es3-formats-arrays (9f603eb) + #19 + #20:
+#
+#   bc1c534 sgx_hwt: hand-written vertex programs (test H4)
+#   1cf20ac sgx/compiler: integer offsets for indirect uniform loads   (= PR #19)
+#   c5044b0 mesa/sgx: gl_VertexID                                     (= PR #20)
+#   2ed439b mesa/sgx: name a matrix attribute's columns without ralloc'ing on the variable   (bug on dev, PR #24)
+#   cace62a mesa/sgx: transform feedback (SGX_DEBUG=xfb)
+#
+# Transform feedback is behind SGX_DEBUG=xfb; the default path is unchanged.
+
+## Test H4 (docs/GL3.md): a store from a vertex program
+# sgx_hwt with a hand-written vertex program (tools/isa/hwt_h4.py): each vertex st.a.d's
+# x, y, its index and a tag 0x4834ab00 at BUF + 16 * index (dwords 4i+1..4i+4: ISA.md's
+# base + 4 * (#i + 1)). Controls: the built-in vertex program, and ours without the stores.
+# Every pixel 0x11223344 (the fragment program ran); h4_st60 is 60 vertices, 20 triangles.
+h4_ctrl_builtin 11223344 buf 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+h4_ctrl_vs_nost 11223344 buf 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+h4_st3 11223344 buf 00000000 bf666666 bf666666 00000000 4834ab00 3f666666 bf666666 00000001 4834ab00 00000000 3f666666 00000002 4834ab00 00000000 00000000 00000000
+h4_st60 11223344 buf 00000000 bf666666 bf666666 00000000 4834ab00 3f666666 bf666666 00000001 4834ab00 00000000 3f666666 00000002 4834ab00 bf666666 bf666666 00000003 4834ab00 3f666666 bf666666 00000004 4834ab00 00000000 3f666666 00000005 4834ab00 bf666666 bf666666 00000006 4834ab00 3f666666 bf666666 00000007 4834ab00 00000000 3f666666 00000008 4834ab00 bf666666 bf666666 00000009 4834ab00 3f666666 bf666666 0000000a 4834ab00 00000000 3f666666 0000000b 4834ab00 bf666666 bf666666 0000000c 4834ab00 3f666666 bf666666 0000000d 4834ab00 00000000 3f666666 0000000e 4834ab00 bf666666 bf666666 0000000f 4834ab00 3f666666 bf666666 00000010 4834ab00 00000000 3f666666 00000011 4834ab00 bf666666 bf666666 00000012 4834ab00 3f666666 bf666666 00000013 4834ab00 00000000 3f666666 00000014 4834ab00 bf666666 bf666666 00000015 4834ab00 3f666666 bf666666 00000016 4834ab00 00000000 3f666666 00000017 4834ab00 bf666666 bf666666 00000018 4834ab00 3f666666 bf666666 00000019 4834ab00 00000000 3f666666 000000 ...
+
+checked by script: h4_st3 3/3 slots exact, h4_st60 60/60 slots exact, nothing past the
+last slot, dmesg clean. The CPU sees the stores after the frame's flush, no extra fence.
+
+## mesa/tests/sgx_xfb.c, final stack, NO MESA_GLES_VERSION_OVERRIDE (SGX_DEBUG=glsl130,ubo,xfb)
+OpenGL ES 3.0 Mesa 26.2.5
+interleaved 64, separate 4 x 4: OK
+1 interleaved vec4+float, discard                32 floats: OK
+   glGetError 0x0
+2 separate: gl_Position (buffer 0)               13 floats: OK
+2 separate: f (buffer 1)                         4 floats: OK
+3 triangle strip of 5                            10 floats: OK
+4 triangle fan of 5                              10 floats: OK
+5 line strip of 4                                7 floats: OK
+5 points, 7                                      8 floats: OK
+6 glDrawElements while capturing                 active 0x502 want 0x502, paused 0x0 want 0: OK
+6 nothing captured                               7 floats: OK
+7 PRIMITIVES_WRITTEN                             got 4 want 4: OK
+8 pause / resume appends                         13 floats: OK
+9 drawn while captured: pixel                    (20,40) got 255 255 255 want 255: OK
+9 drawn while captured: capture                  7 floats: OK
+10 mediump float                                 7 floats: OK
+11 flat int                                      7 65542 131077 .. 327682: OK
+13 glBindBufferRange offset 256, before 12       71 floats: OK
+12 capture drawn from: corner                    ( 2, 2) got 255 255 255 want 255: OK
+12 capture drawn from: corner                    (61,61) got 255 255 255 want 255: OK
+13 glBindBufferRange offset 256, after 12        71 floats: OK
+GL error 0x0
+result: 0 failed
+exit=0
+glxinfo SGX_DEBUG=glsl130,ubo: OpenGL ES profile version string: OpenGL ES 2.0 Mesa 26.2.5
+glxinfo SGX_DEBUG=glsl130,ubo,xfb: OpenGL ES profile version string: OpenGL ES 3.0 Mesa 26.2.5
+0
+(the last line: dmesg lines mentioning powervr)
+
+Earlier: 8 runs of 8 with 0 failed (MESA_GLES_VERSION_OVERRIDE=3.0 SGX_DEBUG=glsl130,xfb).
+Mesa's ES 3.0 now needs all three flags: glsl130 (integers), ubo, xfb.
+
+## Varying packing (st turns it on with EXT_transform_feedback): dEQP-GLES2.functional.shaders, same build
+[none]  Passed: 10196/10252 (99.5%)  Failed: 3/10252 (0.0%)  Not supported: 53/10252 (0.5%)
+[xfb]  Passed: 10196/10252 (99.5%)  Failed: 3/10252 (0.0%)  Not supported: 53/10252 (0.5%)
+fails:
+dEQP-GLES2.functional.shaders.scoping.valid.local_variable_hides_function_parameter_fragment'
+dEQP-GLES2.functional.shaders.scoping.valid.local_variable_hides_function_parameter_vertex'
+dEQP-GLES2.functional.shaders.texture_functions.fragment.texture2dproj_vec4_bias'
+(the 3 failures fail on dev too; tested on its own)
+
+## Default path (no SGX_DEBUG flags), bench-gpu.sh, against dev
+--- dev (b851b4b's Mesa side = 547e4e6)
+[16:34:31] == pr-dev  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[16:34:50] luakit css: FPS=61.7
+[16:35:13] luakit canvas: FPS=13.3
+[16:35:37] luakit webgl: FPS=13.6 GL=WebKit WebGL
+[16:35:53] glxgears: 60.225 FPS
+[16:36:26] mpv x11 720p30 30s: Dropped: 2
+[16:42:02] glmark2:                                   glmark2 Score: 70   fallos: 2
+[16:42:34] mpv drm 720p30 30s: Dropped: 3
+[16:42:35] uapi: 50/50 passed
+[16:42:35] frame: 100/100 frames right
+[16:42:35] irqs: 313121
+[16:42:35] dmesg powervr: 0
+FIN
+--- this branch
+[11:13:58] == pr-h4  kernel 7.3.4-elitepad  mesa /usr/local/lib/sgx/libgallium-26.2.5.so
+[11:14:21] luakit css: FPS=61.7
+[11:14:45] luakit canvas: FPS=12.9
+[11:15:08] luakit webgl: FPS=13.7 GL=WebKit WebGL
+[11:15:25] glxgears: 63.798 FPS
+[11:15:58] mpv x11 720p30 30s: Dropped: 4
+[11:21:35] glmark2:                                   glmark2 Score: 70   fallos: 2
+[11:22:07] mpv drm 720p30 30s: Dropped: 3
+[11:22:08] uapi: 50/50 passed
+[11:22:08] frame: 100/100 frames right
+[11:22:08] irqs: 520184
+[11:22:08] dmesg powervr: 0
+FIN
+luakit and mpv move within run-to-run noise. sgx_compiler_test 77/77.
+
+## A bug on dev found on the way (PR #24)
+compile_shader named a matrix attribute's later columns with ralloc_asprintf(var, ...), but a
+nir_variable comes from the shader's gc allocator, not ralloc. dEQP-GLES2.functional.shaders.
+linkage.varying_type_mat*, 10 runs each, dev vs dev + fix:
+  SGX_DEBUG= (set, empty):  dev 4/10 segfault, fix 0/10
+  SGX_DEBUG unset:          dev 0/10,          fix 0/10   (heap-layout dependent)
+  under gdb: crash in ralloc_asprintf <- compile_shader <- sgx_vs_for <- sgx_draw_vbo
+
+## Known limits
+- The capture is copied into the buffer's CPU copy after each draw that captures, with the GPU
+  idle first: correct, slow for heavy transform feedback use.
+- PRIMITIVES_GENERATED counts only draws with a capture bound.
+- Built-in legacy varyings (gl_TexCoord, gl_FrontColor) captured from a desktop GL shader:
+  remap_legacy_varyings moves them, the capture table doesn't follow (ES has none).
+- Next: dEQP-GLES3 (transform_feedback.*), Chromium 150 without the override.

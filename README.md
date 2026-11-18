@@ -21,11 +21,11 @@ Everything here was tested on real hardware. Lab notes are in Spanish (`docs/`,
 | WiFi (Atheros AR6004, SDIO) | ✅ | patch 0006 (SDIO 1.8 V) + `firmware-atheros` |
 | eMMC 8-bit bus | ✅ 1.4-1.9× faster | patch 0007, `sdhci_acpi.ctv_emmc=1` |
 | Reboot | ✅ | patch 0003 (cold reset through the SCU IPC mailbox) |
-| GPU PowerVR SGX545 (`8086:08cf`) | ✅ GLES 2.0 | upstream: [#17 (kernel)](https://github.com/The1TrueJoe/powervr_sgx/pull/17) and [#18 (Mesa)](https://github.com/The1TrueJoe/powervr_sgx/pull/18) merged; towards GLES 3.0, open: [#19](https://github.com/The1TrueJoe/powervr_sgx/pull/19) (integer offsets for indirect uniform loads), [#20](https://github.com/The1TrueJoe/powervr_sgx/pull/20) (`gl_VertexID`), [#21](https://github.com/The1TrueJoe/powervr_sgx/pull/21) (vertex texture fetch, `SGX_DEBUG=vtf`); next, not yet a PR: branch [`wip/es3-formats-arrays`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/wip/es3-formats-arrays) (sRGB render targets, the ES 3.0 formats, 2D texture arrays: ES 3.0 now lacks only transform feedback); the tablet runs branch [`tablet-dev-highmem`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/tablet-dev-highmem) |
+| GPU PowerVR SGX545 (`8086:08cf`) | ✅ GLES 2.0 | upstream: [#17 (kernel)](https://github.com/The1TrueJoe/powervr_sgx/pull/17) and [#18 (Mesa)](https://github.com/The1TrueJoe/powervr_sgx/pull/18) merged; towards GLES 3.0, open: [#19](https://github.com/The1TrueJoe/powervr_sgx/pull/19) (integer offsets for indirect uniform loads), [#20](https://github.com/The1TrueJoe/powervr_sgx/pull/20) (`gl_VertexID`), [#21](https://github.com/The1TrueJoe/powervr_sgx/pull/21) (vertex texture fetch, `SGX_DEBUG=vtf`), plus [#22](https://github.com/The1TrueJoe/powervr_sgx/pull/22), [#23](https://github.com/The1TrueJoe/powervr_sgx/pull/23) and [#24](https://github.com/The1TrueJoe/powervr_sgx/pull/24) (fixes); next, not yet a PR: branch [`wip/es3-xfb`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/wip/es3-xfb) (sRGB render targets, the ES 3.0 formats, 2D texture arrays and transform feedback: **with `SGX_DEBUG=glsl130,ubo,xfb` Mesa reports OpenGL ES 3.0 without any override**); the tablet runs branch [`tablet-dev-highmem`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/tablet-dev-highmem) |
 | GPU buffers in HIGHMEM | ✅ 1.4-1.7× faster, and lowmem stays free | patches 0008-0009 (`kernel/7.x/patches/lkml/`) + `powervr_sgx.highmem=1` |
 | Desktop | ✅ Xfce on X11, glamor on the SGX545 | `rootfs/desktop/` |
 | Accelerated browser | ✅ WebKitGTK 4.1 / GTK 3 (luakit, surf) | Chromium and Firefox need GLES 3.0 → software only by default; the gap is in [`docs/chromium-gles3-gap.md`](docs/chromium-gles3-gap.md) |
-| Chromium on the GPU (experimental) | ⚠️ runs | #19 + #20 + #21 + a local sRGB/D32F experiment, under `MESA_GLES_VERSION_OVERRIDE=3.0`: GPU process up, no shader failures, WebGL in hardware; CSS 13.2 FPS (software 8.3). Not for daily use yet: the override is still needed (transform feedback missing); real sRGB rendering is on `wip/es3-formats-arrays` |
+| Chromium on the GPU (experimental) | ⚠️ runs | #19 + #20 + #21 + a local sRGB/D32F experiment, under `MESA_GLES_VERSION_OVERRIDE=3.0`: GPU process up, no shader failures, WebGL in hardware; CSS 13.2 FPS (software 8.3). Not for daily use yet: on `wip/es3-xfb` ES 3.0 no longer needs the override; Chromium on that stack is the next test |
 | vblank on `simpledrm` | ✅ | patch 0010 (DRM vblank timer): without it every vsynced client (Xorg Present) ran at ~1 FPS |
 | Audio (Realtek RT5640 + Intel SST DSP) | ❌ in progress | codec answers on I2C-5 `0x1c`; DSP RAM not powered yet (`docs/audio-sst-cloverview.md`) |
 | Cameras (OV8830 / OV2720 via ISP2300) | ❌ | ISP firmware `shisp_css15.bin` is not in linux-firmware; mainline `atomisp` only covers ISP2400/2401 |
@@ -52,6 +52,12 @@ Everything here was tested on real hardware. Lab notes are in Spanish (`docs/`,
   and filtered, R11F_G11F_B10F rendered, snorm), `sgx_texarray` 23/23; compiler gtest 77/77;
   default path benches as dev. Of Mesa's ES 3.0 conditions only `EXT_transform_feedback`
   is left. Two bugs on `dev` found on the way (sRGB shader filter, array `texelFetch`).
+- Transform feedback and ES 3.0 without the override (`wip/es3-xfb`, `results/es3-xfb-2026-11-18.txt`):
+  test H4 on hardware (a vertex program's `st` to memory: 60/60 vertices exact), then
+  `EXT_transform_feedback` behind `SGX_DEBUG=xfb`; probe `sgx_xfb` all pass (interleaved/separate,
+  strip/fan/line order, queries, pause/resume, rasterizer discard); `glxinfo` gives OpenGL ES 3.0
+  with `SGX_DEBUG=glsl130,ubo,xfb` and ES 2.0 without `xfb`. Default path benches as dev, dEQP-GLES2
+  shaders identical with varying packing on. A crash on `dev` with matrix attributes fixed in #24.
 - simpledrm vblank (patch 0010): `glxgears` with vsync 1.4 → 24 FPS, Chromium CSS 1.9 → 13.8 FPS.
 - Browser (WebKitGTK, 1280×740): CSS animation 57.7 FPS; canvas and WebGL ~7 FPS (still CPU copies).
 - eMMC: 23 MB/s → 32-44 MB/s raw with the 8-bit bus. Boot to desktop ~19 s.

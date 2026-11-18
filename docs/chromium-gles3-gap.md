@@ -31,8 +31,13 @@ tocar — y qué **no** hace falta tocar.
   condiciones de `compute_version_es2` **solo falta `EXT_transform_feedback`**
   (hipótesis H4 de `GL3.md`, sin probar en hardware). Detalle y sondas:
   `results/es3-srgb-formats-arrays-2026-11-17.txt`.
-- Falta para que sea usable de verdad: transform feedback (para quitar el override),
-  mipmaps en texturas float (hoy planos F32 de un nivel) y dEQP-GLES3.
+- 2026-11-18, rama [`wip/es3-xfb`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/wip/es3-xfb):
+  hipótesis H4 confirmada en hardware (un programa de vértice escribe en memoria con
+  `st.a.d`: 60/60 vértices exactos) y transform feedback encima (`SGX_DEBUG=xfb`). Con
+  `SGX_DEBUG=glsl130,ubo,xfb` Mesa ya da **OpenGL ES 3.0 sin `MESA_GLES_VERSION_OVERRIDE`**
+  (glxinfo: ES 2.0 sin `xfb`, ES 3.0 con él). Detalle: `results/es3-xfb-2026-11-18.txt`.
+- Falta: probar Chromium 150 sobre esa pila sin el override, dEQP-GLES3, mipmaps en texturas
+  float (hoy planos F32 de un nivel) y que la copia de lo capturado no espere a la GPU.
 
 ## 1. Resumen en cinco frases
 
