@@ -22,8 +22,9 @@ tocar — y qué **no** hace falta tocar.
   uniforms indexados (PR #19), **vertex texture fetch real** (PR #21: los programas
   de Skia ya no fallan por `MAX_VERTEX_TEXTURE_IMAGE_UNITS(0)`), y un experimento
   local con render a sRGB (todavía en lineal) y profundidad D32F/D32F_S8.
-- La composición lenta (~1 FPS) no era la GPU sino el vblank falso de `simpledrm`:
-  arreglado con el parche de kernel 0010.
+- ~~La composición lenta (~1 FPS) no era la GPU sino el vblank falso de `simpledrm`.~~
+  Corrección 2026-11-20: era un error de medida (Xorg baja a 1 Hz con la pantalla apagada
+  por DPMS). El parche 0010 está retirado (`kernel/7.x/withdrawn/`).
 - Tarde del 2026-11-17, rama [`wip/es3-formats-arrays`](https://github.com/servidorjarvis1-svg/powervr_sgx/tree/wip/es3-formats-arrays)
   (local, sin PR): sRGB codificado de verdad (blend en lineal en el programa), los
   formatos de ES 3.0 (texture LOD en fragmento, D32F/D32F_S8, float 32F/16F,

@@ -26,7 +26,6 @@ Everything here was tested on real hardware. Lab notes are in Spanish (`docs/`,
 | Desktop | ✅ Xfce on X11, glamor on the SGX545 | `rootfs/desktop/` |
 | Accelerated browser | ✅ WebKitGTK 4.1 / GTK 3 (luakit, surf) | Chromium and Firefox need GLES 3.0 → software only by default; the gap is in [`docs/chromium-gles3-gap.md`](docs/chromium-gles3-gap.md) |
 | Chromium on the GPU (experimental) | ⚠️ runs | #19 + #20 + #21 + a local sRGB/D32F experiment, under `MESA_GLES_VERSION_OVERRIDE=3.0`: GPU process up, no shader failures, WebGL in hardware; CSS 13.2 FPS (software 8.3). Not for daily use yet: on `wip/es3-xfb` ES 3.0 no longer needs the override; Chromium on that stack is the next test |
-| vblank on `simpledrm` | ✅ | patch 0010 (DRM vblank timer): without it every vsynced client (Xorg Present) ran at ~1 FPS |
 | Audio (Realtek RT5640 + Intel SST DSP) | ❌ in progress | codec answers on I2C-5 `0x1c`; DSP RAM not powered yet (`docs/audio-sst-cloverview.md`) |
 | Cameras (OV8830 / OV2720 via ISP2300) | ❌ | ISP firmware `shisp_css15.bin` is not in linux-firmware; mainline `atomisp` only covers ISP2400/2401 |
 | RTC | ❌ | no `/dev/rtc`; time comes from NTP |
@@ -58,7 +57,7 @@ Everything here was tested on real hardware. Lab notes are in Spanish (`docs/`,
   strip/fan/line order, queries, pause/resume, rasterizer discard); `glxinfo` gives OpenGL ES 3.0
   with `SGX_DEBUG=glsl130,ubo,xfb` and ES 2.0 without `xfb`. Default path benches as dev, dEQP-GLES2
   shaders identical with varying packing on. A crash on `dev` with matrix attributes fixed in #24.
-- simpledrm vblank (patch 0010): `glxgears` with vsync 1.4 → 24 FPS, Chromium CSS 1.9 → 13.8 FPS.
+- simpledrm vblank (former patch 0010): **withdrawn**. The "~1 FPS with vsync" was a measurement error: Xorg deliberately drops to 1 Hz while the panel is blanked by DPMS. A/B with the display forced on: `glxgears` with vsync ~60 FPS without the patch, 25-29 FPS with it. Kept for reference in `kernel/7.x/withdrawn/`.
 - Browser (WebKitGTK, 1280×740): CSS animation 57.7 FPS; canvas and WebGL ~7 FPS (still CPU copies).
 - eMMC: 23 MB/s → 32-44 MB/s raw with the 8-bit bus. Boot to desktop ~19 s.
 
